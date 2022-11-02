@@ -3,7 +3,6 @@ vendor
 /assets
 files
 install
-system
 app/config/database.php
 app/config/config.php
 Stock Manager Advance v3.4.51.zip
