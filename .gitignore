@@ -1,0 +1,10 @@
+.htaccess
+vendor
+assets
+files
+install
+system
+app/config/database.php
+Stock Manager Advance v3.4.51.zip
+.idea
+update
