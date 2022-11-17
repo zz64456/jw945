@@ -2,6 +2,8 @@
 
 defined('BASEPATH') or exit('No direct script access allowed');
 
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
 class Sales extends MY_Controller
 {
     public function __construct()
@@ -2080,6 +2082,88 @@ class Sales extends MY_Controller
             $this->session->set_flashdata('error', validation_errors());
             redirect($_SERVER['HTTP_REFERER']);
         }
+    }
+
+
+    public function import_csv()
+    {
+        ini_set('memory_limit', '1024M');
+
+        if ($this->form_validation->run() == false) {
+            if (isset($_FILES['userfile'])) {
+                $this->load->library('upload');
+                $config['upload_path'] = $this->digital_upload_path;
+                $config['allowed_types'] = 'csv|xlsx|xltx';
+                $config['max_size'] = $this->allowed_file_size;
+                $config['overwrite'] = true;
+                $this->upload->initialize($config);
+                if (!$this->upload->do_upload()) {
+                    $error = $this->upload->display_errors();
+                    $this->session->set_flashdata('error', $error);
+                    admin_redirect('sales/import_csv');
+                }
+                $file = $this->upload->file_name;
+
+                $this->load->library('excel');
+                $reader = new \PhpOffice\PhpSpreadsheet\Reader\Xlsx();
+                $reader->setReadDataOnly(true);
+                $spreadsheet = $reader->load($this->digital_upload_path . $file);
+                $sheet = $spreadsheet->getSheet(0);
+                //獲取具有單元格記錄的工作表的最高列和最高行。
+                $highest_row_index    = $sheet->getHighestRow();
+                $highest_column_index = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sheet->getHighestColumn(1));
+
+                $title = array();
+                foreach (range(1, $highest_column_index) as $j){
+                    $value = $sheet->getCellByColumnAndRow($j, 1)->getValue();
+                    array_push($title, $value);
+                }
+
+                $file_type_check = '訂單成立日期';
+                $file_type = 1; // 預設為蝦皮
+                if (!in_array($file_type_check, $title)) { // 找不到$file_type_check則為露天
+                    $file_type = 2;
+                }
+
+                $errorID = [];
+                for($row = 2; $row <= $highest_row_index; $row++) { // 行
+                    $item = [];
+                    foreach ($title as $title_index => $title_value) {
+                        $row_value = $sheet->getCellByColumnAndRow($title_index+1, $row)->getFormattedValue();
+                        $item[$title_value] = $row_value;
+                    }
+                    $needed = array();
+                    if ($file_type == 1) { // 蝦皮
+                        $needed['date'] = $item['訂單成立日期'];
+                        $needed['sale_items'] = $item['商品選項貨號'];
+                        $needed['note'] = $item['買家備註'];
+                        $needed['staff_note'] = $item['備註'];
+                        $needed['total'] = $item['商品總價'];
+                        $needed['grand_total'] = $item['買家總支付金額'];
+                    }
+                    if ($file_type == 2 ) { // 露天
+                        $needed['date'] = $item['結帳時間'];
+                        $needed['sale_items'] = $item['賣家自用料號'];
+                        $needed['note'] = $item['給賣家的話'];
+                        // $needed['staff_note'] = $item['備註']; 露天無此欄位
+                        $needed['total'] = (int)$item['數量']*(int)$item['單價'];
+                        $needed['grand_total'] = $item['結帳總金額'];
+                    }
+                    $needed['upload_status'] = 1; // upload_status : 1->庫存正常  2->庫存不足  3->待確認
+                    $needed['reference_no'] = $item['訂單編號'];
+                    $needed['customer'] = $item['買家帳號'];
+                    if($this->sales_model->addUploadsTmp($needed) === false) {
+                        // 錯誤處理 1->整個檔案清除(用trans)  2->僅返回該筆訂單編號 or Both
+                        $errorID[] = $needed['reference_no'];
+                    }
+                }
+            }
+        }
+
+        $this->data['greetings'] = 'Hey, dude!';
+        $bc                        = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => 'import_csv']];
+        $meta                      = ['page_title' => 'import_csv', 'bc' => $bc];
+        $this->page_construct('sales/import_csv', $meta, $this->data);
     }
 
     /* -------------------------------------------------------------------------------------- */

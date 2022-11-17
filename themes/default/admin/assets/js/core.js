@@ -61,7 +61,7 @@ function cssStyle() {
 $('#csv_file').change(function (e) {
     v = $(this).val();
     if (v != '') {
-        var validExts = new Array('.csv');
+        var validExts = ['.csv', '.xltx', '.xlsx', '.xls'];
         var fileExt = v;
         fileExt = fileExt.substring(fileExt.lastIndexOf('.'));
         if (validExts.indexOf(fileExt) < 0) {

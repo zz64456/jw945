@@ -943,4 +943,12 @@ class Sales_model extends CI_Model
         }
         return false;
     }
+
+    public function addUploadsTmp($data = []){
+        if ($this->db->insert('uploads_tmp', $data)) {
+            return $this->db->insert_id();
+        } else {
+            return false;
+        }
+    }
 }
