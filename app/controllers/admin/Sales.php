@@ -2092,6 +2092,9 @@ class Sales extends MY_Controller
         if ($this->form_validation->run() == false) {
             if (isset($_FILES['userfile'])) {
                 $this->load->library('upload');
+                $extension = pathinfo($_FILES['userfile']['name'],PATHINFO_EXTENSION); //取得檔案副檔名
+                $filename = explode(".".$extension, $_FILES['userfile']['name'])[0];
+                $config['file_name'] = $filename.'_'.time().'.'.$extension;
                 $config['upload_path'] = $this->digital_upload_path;
                 $config['allowed_types'] = 'csv|xlsx|xltx';
                 $config['max_size'] = $this->allowed_file_size;
