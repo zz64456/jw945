@@ -2,7 +2,7 @@
 
 <div class="box">
     <div class="box-header">
-        <h2 class="blue"><i class="fa-fw fa fa-tasks"></i> <?= 'Tmp Table' ?></h2>
+        <h2 class="blue"><i class="fa-fw fa fa-tasks"></i> <?= lang('import_data') ?></h2>
     </div>
     <div class="box-content">
         <div class="row">
@@ -182,7 +182,7 @@
 
 <div class="box">
     <div class="box-header">
-        <h2 class="blue"><i class="fa-fw fa fa-plus"></i><?= lang('add_sale'); ?></h2>
+        <h2 class="blue"><i class="fa-fw fa fa-plus"></i><?= lang('import_csv'); ?></h2>
     </div>
     <div class="box-content">
         <div class="row">
@@ -203,8 +203,9 @@
                             </div>
                         </div>
                         <div class="col-md-12">
-                            <div class="fprom-group"><?php echo form_submit('add_sale', $this->lang->line('submit'), 'id="add_sale" class="btn btn-primary" style="padding: 6px 15px; margin:15px 0;"'); ?>
-                                <button type="button" class="btn btn-danger" id="reset"><?= lang('reset') ?>
+                            <div class="fprom-group">
+                                <?php echo form_submit('add_sale', $this->lang->line('submit'), 'id="add_sale" class="btn btn-primary" style="padding: 6px 15px; margin:15px 0;"'); ?>
+<!--                                <button type="button" class="btn btn-danger" id="reset">--><?//= lang('reset') ?>
                             </div>
                         </div>
                     </div>

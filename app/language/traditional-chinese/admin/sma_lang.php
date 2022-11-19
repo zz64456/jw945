@@ -153,6 +153,7 @@ $lang['sales']                            = '銷售';
 $lang['list_sales']                       = '銷售列表';
 $lang['add_sale']                         = '新增銷售';
 $lang['import_csv']                       = '匯入訂單';
+$lang['import_data']                      = '匯入資料';
 $lang['deliveries']                       = '交貨';
 $lang['gift_cards']                       = '禮品卡';
 $lang['quotes']                           = '報價';

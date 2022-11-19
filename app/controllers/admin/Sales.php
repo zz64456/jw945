@@ -2161,8 +2161,8 @@ class Sales extends MY_Controller
         }
 
         $this->data['greetings'] = 'Hey, dude!';
-        $bc                        = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => 'import_csv']];
-        $meta                      = ['page_title' => 'import_csv', 'bc' => $bc];
+        $bc                        = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('import_csv')]];
+        $meta                      = ['page_title' => lang('import_csv'), 'bc' => $bc];
         $this->page_construct('sales/import_csv', $meta, $this->data);
     }
 
