@@ -21,6 +21,7 @@ class Sales extends MY_Controller
         $this->lang->admin_load('sales', $this->Settings->user_language);
         $this->load->library('form_validation');
         $this->load->admin_model('sales_model');
+        $this->load->admin_model('companies_model');
         $this->digital_upload_path = 'files/';
         $this->upload_path         = 'assets/uploads/';
         $this->thumbs_path         = 'assets/uploads/thumbs/';
@@ -2128,7 +2129,9 @@ class Sales extends MY_Controller
                     $file_type = 2;
                 }
 
-                $errorID = [];
+                $errorID = array();
+                $data = array();
+
                 for($row = 2; $row <= $highest_row_index; $row++) { // 行
                     $item = [];
                     foreach ($title as $title_index => $title_value) {
@@ -2136,37 +2139,76 @@ class Sales extends MY_Controller
                         $item[$title_value] = $row_value;
                     }
                     $needed = array();
-                    if ($file_type == 1) { // 蝦皮
-                        $needed['date'] = $item['訂單成立日期'];
-                        $needed['sale_items'] = $item['商品選項貨號'];
-                        $needed['note'] = $item['買家備註'];
-                        $needed['staff_note'] = $item['備註'];
-                        $needed['total'] = $item['商品總價'];
-                        $needed['grand_total'] = $item['買家總支付金額'];
+                    switch ($file_type){
+                        case 1: // 蝦皮
+                            $needed['date'] = $item['訂單成立日期'];
+                            $needed['sale_items'] = $item['商品選項貨號'];
+                            $needed['note'] = $item['買家備註'];
+                            $needed['staff_note'] = $item['備註'];
+                            $needed['total'] = $item['商品總價'];
+                            $needed['grand_total'] = $item['買家總支付金額'];
+                            $needed['shipping'] = $item['買家支付運費'];
+                            $needed['customer'] = '蝦皮 ';
+                            break;
+
+                        case 2: // 露天
+                            $needed['date'] = $item['結帳時間'];
+                            $needed['sale_items'] = $item['賣家自用料號'];
+                            $needed['note'] = $item['給賣家的話'];
+                            // $needed['staff_note'] = $item['備註']; 露天無此欄位
+                            $needed['total'] = (int)$item['數量']*(int)$item['單價'];
+                            $needed['grand_total'] = $item['結帳總金額'];
+                            $needed['shipping'] = $item['運費'];
+                            $needed['customer'] = '露天 ';
+                            break;
                     }
-                    if ($file_type == 2 ) { // 露天
-                        $needed['date'] = $item['結帳時間'];
-                        $needed['sale_items'] = $item['賣家自用料號'];
-                        $needed['note'] = $item['給賣家的話'];
-                        // $needed['staff_note'] = $item['備註']; 露天無此欄位
-                        $needed['total'] = (int)$item['數量']*(int)$item['單價'];
-                        $needed['grand_total'] = $item['結帳總金額'];
-                    }
-                    $needed['upload_status'] = 1; // upload_status : 1->庫存正常  2->庫存不足  3->待確認
+
+                    /* upload_status : 0->庫存正常  1->庫存不足  2->待確認[訂單重複]  4->待確認[料號不齊]  9->已上傳 */
+                    $needed['upload_status'] = 0;
                     $needed['reference_no'] = $item['訂單編號'];
-                    $needed['customer'] = $item['買家帳號'];
-                    if($this->sales_model->addUploadsTmp($needed) === false) {
-                        // 錯誤處理 1->整個檔案清除(用trans)  2->僅返回該筆訂單編號 or Both
-                        $errorID[] = $needed['reference_no'];
+                    $needed['customer'] .= $item['買家帳號'];
+
+                    if ($this->sales_model->getSalesByRef($needed['reference_no']) || $this->sales_model->getUploadsTmpByRef($needed['reference_no'])) {
+                        $needed['upload_status'] += 2; // 訂單重複
                     }
+                    if ($product_details = $this->sales_model->getProductByCode($needed['sale_items'])) {
+                        if ($needed['sale_items'] > $product_details->quantity) {
+                            $needed['upload_status'] += 1; // 庫存不足
+                        }
+                    } else {
+                        $needed['upload_status'] += 4; // 料號不齊
+                    }
+                    $customer = $this->companies_model->getCustomerByName($needed['customer']);
+                    if (!$customer) {
+                        $customer = array(
+                            'group_id' => 3,
+                            'group_name' => 'customer',
+                            'customer_group_id' => $file_type==1 ? 6 : 5,
+                            'customer_group_name' => $file_type==1 ? '蝦皮客戶' : '露天客戶',
+                            'name' => $needed['customer'],
+                            'company' => $needed['customer'],
+                            'logo' => 'logo.png',
+                            'price_group_id' => 1,
+                            'price_group_name' => 'Default',
+                        );
+                        $this->companies_model->addCompany($customer);
+                    }
+                    $data[] = $needed;
                 }
+                if ($this->sales_model->addUploadsTmps($data)) {
+                    $this->session->set_flashdata('message', $this->lang->line('sale_uploaded'));
+                    admin_redirect('sales/import_csv');
+                } else {
+                    $this->session->set_flashdata('message', $this->lang->line('sale_uploaded_failed'));
+                    admin_redirect('sales/import_csv');
+                }
+            } else {
+                $this->data['greetings'] = 'Hey, dude!';
+                $bc                        = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('import_csv')]];
+                $meta                      = ['page_title' => lang('import_csv'), 'bc' => $bc];
+                $this->page_construct('sales/import_csv', $meta, $this->data);
             }
         }
-
-        $this->data['greetings'] = 'Hey, dude!';
-        $bc                        = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('import_csv')]];
-        $meta                      = ['page_title' => lang('import_csv'), 'bc' => $bc];
-        $this->page_construct('sales/import_csv', $meta, $this->data);
     }
 
     /* -------------------------------------------------------------------------------------- */

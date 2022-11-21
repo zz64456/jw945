@@ -132,6 +132,15 @@ class Companies_model extends CI_Model
         return false;
     }
 
+    public function getCustomerByName($name)
+    {
+        $q = $this->db->get_where('companies', ['name' => $name], 1);
+        if ($q->num_rows() > 0) {
+            return $q->row();
+        }
+        return false;
+    }
+
     public function getAllCustomerGroups()
     {
         $q = $this->db->get('customer_groups');

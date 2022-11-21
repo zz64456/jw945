@@ -944,6 +944,35 @@ class Sales_model extends CI_Model
         return false;
     }
 
+    public function getSalesByRef($reference_no)
+    {
+        $q = $this->db->get_where('sales', ['reference_no' => $reference_no], 1);
+        if ($q->num_rows() > 0) {
+            return $q->row();
+        }
+        return false;
+    }
+
+    public function getUploadsTmpByRef($reference_no)
+    {
+        $q = $this->db->get_where('uploads_tmp', ['reference_no' => $reference_no], 1);
+        if ($q->num_rows() > 0) {
+            return $q->row();
+        }
+        return false;
+    }
+
+    public function addUploadsTmps($data = [])
+    {
+        $this->db->trans_start();
+        $result = $this->db->insert_batch('uploads_tmp', $data);
+        $this->db->trans_complete();
+        if ($result) {
+            return true;
+        }
+        return false;
+    }
+
     public function addUploadsTmp($data = []){
         if ($this->db->insert('uploads_tmp', $data)) {
             return $this->db->insert_id();
