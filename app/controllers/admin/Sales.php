@@ -22,6 +22,7 @@ class Sales extends MY_Controller
         $this->load->library('form_validation');
         $this->load->admin_model('sales_model');
         $this->load->admin_model('companies_model');
+        $this->load->admin_model('db_model');
         $this->digital_upload_path = 'files/';
         $this->upload_path         = 'assets/uploads/';
         $this->thumbs_path         = 'assets/uploads/thumbs/';
@@ -1609,7 +1610,7 @@ class Sales extends MY_Controller
         $this->page_construct('sales/index', $meta, $this->data);
     }
 
-    public function modal_view($id = null)
+    public function modal_view($id = null, $table = null)
     {
         $this->sma->checkPermissions('index', true);
         $this->load->library('inv_qrcode');
@@ -1619,6 +1620,9 @@ class Sales extends MY_Controller
         }
         $this->data['error'] = (validation_errors()) ? validation_errors() : $this->session->flashdata('error');
         $inv                 = $this->sales_model->getInvoiceByID($id);
+        if ($table) {
+            $inv             = $this->sales_model->getUploadsTmpByID($id);
+        }
         if (!$this->session->userdata('view_right')) {
             $this->sma->view_rights($inv->created_by, true);
         }
@@ -2085,8 +2089,25 @@ class Sales extends MY_Controller
         }
     }
 
+    public function getCustomer($id = null)
+    {
+        $row = $this->companies_model->getCompanyByID($id);
+        $this->sma->send_json([['id' => $row->id, 'text' => ($row->company && $row->company != '-' ? $row->company : $row->name)]]);
+    }
 
-    public function import_csv()
+    public function getUploadsTmp()
+    {
+        $this->load->library('datatables');
+        $this->datatables
+            ->select('id, company, name, email, phone, price_group_name, customer_group_name, vat_no, gst_no, deposit_amount, award_points')
+            ->from('companies')
+            ->where('group_name', 'customer')
+            ->add_column('Actions', "<div class=\"text-center\"><a class=\"tip\" title='" . lang('list_deposits') . "' href='" . admin_url('customers/deposits/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-money\"></i></a> <a class=\"tip\" title='" . lang('add_deposit') . "' href='" . admin_url('customers/add_deposit/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-plus\"></i></a> <a class=\"tip\" title='" . lang('list_addresses') . "' href='" . admin_url('customers/addresses/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-location-arrow\"></i></a> <a class=\"tip\" title='" . lang('list_users') . "' href='" . admin_url('customers/users/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-users\"></i></a> <a class=\"tip\" title='" . lang('add_user') . "' href='" . admin_url('customers/add_user/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-user-plus\"></i></a> <a class=\"tip\" title='" . lang('edit_customer') . "' href='" . admin_url('customers/edit/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-edit\"></i></a> <a href='#' class='tip po' title='<b>" . lang('delete_customer') . "</b>' data-content=\"<p>" . lang('r_u_sure') . "</p><a class='btn btn-danger po-delete' href='" . admin_url('customers/delete/$1') . "'>" . lang('i_m_sure') . "</a> <button class='btn po-close'>" . lang('no') . "</button>\"  rel='popover'><i class=\"fa fa-trash-o\"></i></a></div>", 'id');
+        //->unset_column('id');
+        echo $this->datatables->generate();
+    }
+
+    public function uploadsTmp()
     {
         ini_set('memory_limit', '1024M');
 
@@ -2166,7 +2187,10 @@ class Sales extends MY_Controller
                     /* upload_status : 0->庫存正常  1->庫存不足  2->待確認[訂單重複]  4->待確認[料號不齊]  9->已上傳 */
                     $needed['upload_status'] = 0;
                     $needed['reference_no'] = $item['訂單編號'];
+                    $needed['biller_id'] = 3;
+                    $needed['biller'] = '詠強有限公司';
                     $needed['customer'] .= $item['買家帳號'];
+                    $needed['created_by'] = $this->session->userdata('user_id');
 
                     if ($this->sales_model->getSalesByRef($needed['reference_no']) || $this->sales_model->getUploadsTmpByRef($needed['reference_no'])) {
                         $needed['upload_status'] += 2; // 訂單重複
@@ -2191,22 +2215,24 @@ class Sales extends MY_Controller
                             'price_group_id' => 1,
                             'price_group_name' => 'Default',
                         );
-                        $this->companies_model->addCompany($customer);
+                        $companyId = $this->companies_model->addCompany($customer);
+                        $customer = $this->companies_model->getCompanyByID($companyId);
                     }
+                    $needed['customer_id'] = $customer->id;
                     $data[] = $needed;
                 }
                 if ($this->sales_model->addUploadsTmps($data)) {
                     $this->session->set_flashdata('message', $this->lang->line('sale_uploaded'));
-                    admin_redirect('sales/import_csv');
+                    admin_redirect('sales/uploadsTmp');
                 } else {
                     $this->session->set_flashdata('message', $this->lang->line('sale_uploaded_failed'));
-                    admin_redirect('sales/import_csv');
+                    admin_redirect('sales/uploadsTmp');
                 }
             } else {
-                $this->data['greetings'] = 'Hey, dude!';
-                $bc                        = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('import_csv')]];
-                $meta                      = ['page_title' => lang('import_csv'), 'bc' => $bc];
-                $this->page_construct('sales/import_csv', $meta, $this->data);
+                $this->data['uploadstmps'] = $this->sales_model->getLatestUploadsTmps();
+                $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('uploadsTmp')]];
+                $meta = ['page_title' => lang('uploadsTmp'), 'bc' => $bc];
+                $this->page_construct('sales/uploadsTmp', $meta, $this->data);
             }
         }
     }

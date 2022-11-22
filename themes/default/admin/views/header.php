@@ -457,9 +457,9 @@
                                         </a>
                                     </li>
                                     <li id="sales_import_csv">
-                                        <a class="submenu" href="<?= admin_url('sales/import_csv'); ?>">
+                                        <a class="submenu" href="<?= admin_url('sales/uploadsTmp'); ?>">
                                             <i class="fa fa-plus-circle"></i>
-                                            <span class="text"> <?= lang('import_csv'); ?></span>
+                                            <span class="text"> <?= lang('uploadsTmp'); ?></span>
                                         </a>
                                     </li>
                                     <li id="sales_sale_by_csv">

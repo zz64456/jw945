@@ -1,4 +1,21 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
+<?php
+function row_status($x)
+{
+    if ($x == null) {
+        return '';
+    } elseif ($x == 'pending') {
+        return '<div class="text-center"><span class="label label-warning">' . lang($x) . '</span></div>';
+    } elseif ($x == 'completed' || $x == 'paid' || $x == 'sent' || $x == 'received') {
+        return '<div class="text-center"><span class="label label-success">' . lang($x) . '</span></div>';
+    } elseif ($x == 'partial' || $x == 'transferring') {
+        return '<div class="text-center"><span class="label label-info">' . lang($x) . '</span></div>';
+    } elseif ($x == 'due') {
+        return '<div class="text-center"><span class="label label-danger">' . lang($x) . '</span></div>';
+    }
+    return '<div class="text-center"><span class="label label-default">' . lang($x) . '</span></div>';
+}
+?>
 
 <div class="box">
     <div class="box-header">
@@ -32,7 +49,7 @@
                             <div class="row">
                                 <div class="col-sm-12">
                                     <div class="table-responsive">
-                                        <table id="sales-tbl" cellpadding="0" cellspacing="0" border="0"
+                                        <table id="uploadstmp-sufficient-tbl" cellpadding="0" cellspacing="0" border="0"
                                                class="table table-bordered table-hover table-striped"
                                                style="margin-bottom: 0;">
                                             <thead>
@@ -46,17 +63,15 @@
                                             </tr>
                                             </thead>
                                             <tbody>
-                                            <?php if (!empty($sales)) {
+                                            <?php if (!empty($uploadstmps)) {
                                                 $r = 1;
-                                                foreach ($sales as $order) {
-                                                    echo '<tr id="' . $order->id . '" class="' . ($order->pos ? 'receipt_link' : 'invoice_link') . '"><td>' . $r . '</td>
+                                                foreach ($uploadstmps as $order) {
+                                                    echo '<tr id="' . $order->id . '" class="' . ($order->pos ? 'receipt_link' : 'invoice_link3') . '"><td>' . $r . '</td>
                                                             <td>' . $this->sma->hrld($order->date) . '</td>
                                                             <td>' . $order->reference_no . '</td>
                                                             <td>' . $order->customer . '</td>
-                                                            <td>' . row_status($order->sale_status) . '</td>
                                                             <td class="text-right">' . $this->sma->formatMoney($order->grand_total) . '</td>
-                                                            <td>' . row_status($order->payment_status) . '</td>
-                                                            <td class="text-right">' . $this->sma->formatMoney($order->paid) . '</td>
+                                                            <td>' . row_status($order->sale_status) . '</td>
                                                         </tr>';
                                                     $r++;
                                                 }
@@ -83,7 +98,7 @@
                             <div class="row">
                                 <div class="col-sm-12">
                                     <div class="table-responsive">
-                                        <table id="quotes-tbl" cellpadding="0" cellspacing="0" border="0"
+                                        <table id="uploadstmp-insufficient-tbl" cellpadding="0" cellspacing="0" border="0"
                                                class="table table-bordered table-hover table-striped"
                                                style="margin-bottom: 0;">
                                             <thead>
@@ -131,7 +146,7 @@
                             <div class="row">
                                 <div class="col-sm-12">
                                     <div class="table-responsive">
-                                        <table id="purchases-tbl" cellpadding="0" cellspacing="0" border="0"
+                                        <table id="uploadstmp-waittocheck-tbl" cellpadding="0" cellspacing="0" border="0"
                                                class="table table-bordered table-hover table-striped"
                                                style="margin-bottom: 0;">
                                             <thead>
@@ -182,7 +197,7 @@
 
 <div class="box">
     <div class="box-header">
-        <h2 class="blue"><i class="fa-fw fa fa-plus"></i><?= lang('import_csv'); ?></h2>
+        <h2 class="blue"><i class="fa-fw fa fa-plus"></i><?= lang('uploadsTmp'); ?></h2>
     </div>
     <div class="box-content">
         <div class="row">
@@ -190,7 +205,7 @@
 
                 <?php
                 $attrib = ['data-toggle' => 'validator', 'role' => 'form'];
-                echo admin_form_open_multipart('sales/import_csv', $attrib);
+                echo admin_form_open_multipart('sales/uploadsTmp', $attrib);
                 ?>
 
                 <div class="row">

@@ -953,11 +953,32 @@ class Sales_model extends CI_Model
         return false;
     }
 
+    public function getUploadsTmpByID($id)
+    {
+        $q = $this->db->get_where('uploads_tmp', ['id' => $id], 1);
+        if ($q->num_rows() > 0) {
+            return $q->row();
+        }
+        return false;
+    }
+
     public function getUploadsTmpByRef($reference_no)
     {
         $q = $this->db->get_where('uploads_tmp', ['reference_no' => $reference_no], 1);
         if ($q->num_rows() > 0) {
             return $q->row();
+        }
+        return false;
+    }
+
+    public function getAllUploadsTmp()
+    {
+        $q = $this->db->get('uploads_tmp');
+        if ($q->num_rows() > 0) {
+            foreach ($q->result() as $row) {
+                $data[] = $row;
+            }
+            return $data;
         }
         return false;
     }
@@ -978,6 +999,21 @@ class Sales_model extends CI_Model
             return $this->db->insert_id();
         } else {
             return false;
+        }
+    }
+
+    public function getLatestUploadsTmps()
+    {
+        if ($this->Settings->restrict_user && !$this->Owner && !$this->Admin) {
+            $this->db->where('created_by', $this->session->userdata('user_id'));
+        }
+        $this->db->order_by('id', 'desc');
+        $q = $this->db->get('uploads_tmp', 5);
+        if ($q->num_rows() > 0) {
+            foreach (($q->result()) as $row) {
+                $data[] = $row;
+            }
+            return $data;
         }
     }
 }
