@@ -1390,6 +1390,7 @@ $(document).ready(function () {
         $('#myModal').modal('show');
     });
     $('body').on('click', '.invoice_link3 td:not(:first-child, :nth-child(6), :nth-last-child(2), :last-child)', function () {
+        console.log(site.base_url + 'sales/modal_view/' + $(this).parent('.invoice_link3').attr('id') + '/1');
         $('#myModal').modal({
             remote: site.base_url + 'sales/modal_view/' + $(this).parent('.invoice_link3').attr('id') + '/1',
         });

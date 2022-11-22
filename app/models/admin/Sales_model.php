@@ -240,6 +240,33 @@ class Sales_model extends CI_Model
         return false;
     }
 
+    public function getAllInvoiceItems_sale_items_tmp($sale_id, $return_id = null)
+    {
+        $this->db->select('sale_items_tmp.*, tax_rates.code as tax_code, tax_rates.name as tax_name, tax_rates.rate as tax_rate, products.image, products.details as details, product_variants.name as variant, products.hsn_code as hsn_code, products.second_name as second_name, products.unit as base_unit_id, units.code as base_unit_code')
+            ->join('products', 'products.id=sale_items_tmp.product_id', 'left')
+            ->join('product_variants', 'product_variants.id=sale_items_tmp.option_id', 'left')
+            ->join('tax_rates', 'tax_rates.id=sale_items_tmp.tax_rate_id', 'left')
+            ->join('units', 'units.id=products.unit', 'left')
+            ->group_by('sale_items_tmp.id')
+            ->order_by('id', 'asc');
+        if ($sale_id && !$return_id) {
+            $this->db->where('sale_id', $sale_id);
+        } elseif ($return_id) {
+            $this->db->where('sale_id', $return_id);
+        }
+        $a = $this->db->get_compiled_select('sale_items_tmp');
+        echo "SQL:<br>";
+        echo $a;
+        $q = $this->db->get('sale_items_tmp');
+        if ($q->num_rows() > 0) {
+            foreach (($q->result()) as $row) {
+                $data[] = $row;
+            }
+            return $data;
+        }
+        return false;
+    }
+
     public function getAllInvoiceItems($sale_id, $return_id = null)
     {
         $this->db->select('sale_items.*, tax_rates.code as tax_code, tax_rates.name as tax_name, tax_rates.rate as tax_rate, products.image, products.details as details, product_variants.name as variant, products.hsn_code as hsn_code, products.second_name as second_name, products.unit as base_unit_id, units.code as base_unit_code')
@@ -953,40 +980,28 @@ class Sales_model extends CI_Model
         return false;
     }
 
-    public function getUploadsTmpByID($id)
+    public function getSalesTmpByID($id)
     {
-        $q = $this->db->get_where('uploads_tmp', ['id' => $id], 1);
+        $q = $this->db->get_where('sales_tmp', ['id' => $id], 1);
         if ($q->num_rows() > 0) {
             return $q->row();
         }
         return false;
     }
 
-    public function getUploadsTmpByRef($reference_no)
+    public function getSalesTmpByRef($reference_no)
     {
-        $q = $this->db->get_where('uploads_tmp', ['reference_no' => $reference_no], 1);
+        $q = $this->db->get_where('sales_tmp', ['reference_no' => $reference_no], 1);
         if ($q->num_rows() > 0) {
             return $q->row();
         }
         return false;
     }
 
-    public function getAllUploadsTmp()
-    {
-        $q = $this->db->get('uploads_tmp');
-        if ($q->num_rows() > 0) {
-            foreach ($q->result() as $row) {
-                $data[] = $row;
-            }
-            return $data;
-        }
-        return false;
-    }
-
-    public function addUploadsTmps($data = [])
+    public function addSalesTmps($data = [])
     {
         $this->db->trans_start();
-        $result = $this->db->insert_batch('uploads_tmp', $data);
+        $result = $this->db->insert_batch('sales_tmp', $data);
         $this->db->trans_complete();
         if ($result) {
             return true;
@@ -994,21 +1009,21 @@ class Sales_model extends CI_Model
         return false;
     }
 
-    public function addUploadsTmp($data = []){
-        if ($this->db->insert('uploads_tmp', $data)) {
+    public function addSalesTmp($data = []){
+        if ($this->db->insert('sales_tmp', $data)) {
             return $this->db->insert_id();
         } else {
             return false;
         }
     }
 
-    public function getLatestUploadsTmps()
+    public function getLatestSalesTmps()
     {
         if ($this->Settings->restrict_user && !$this->Owner && !$this->Admin) {
             $this->db->where('created_by', $this->session->userdata('user_id'));
         }
         $this->db->order_by('id', 'desc');
-        $q = $this->db->get('uploads_tmp', 5);
+        $q = $this->db->get('sales_tmp', 5);
         if ($q->num_rows() > 0) {
             foreach (($q->result()) as $row) {
                 $data[] = $row;

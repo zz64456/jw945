@@ -1621,7 +1621,7 @@ class Sales extends MY_Controller
         $this->data['error'] = (validation_errors()) ? validation_errors() : $this->session->flashdata('error');
         $inv                 = $this->sales_model->getInvoiceByID($id);
         if ($table) {
-            $inv             = $this->sales_model->getUploadsTmpByID($id);
+            $inv             = $this->sales_model->getSalesTmpByID($id);
         }
         if (!$this->session->userdata('view_right')) {
             $this->sma->view_rights($inv->created_by, true);
@@ -1632,7 +1632,7 @@ class Sales extends MY_Controller
         $this->data['updated_by']  = $inv->updated_by ? $this->site->getUser($inv->updated_by) : null;
         $this->data['warehouse']   = $this->site->getWarehouseByID($inv->warehouse_id);
         $this->data['inv']         = $inv;
-        $this->data['rows']        = $this->sales_model->getAllInvoiceItems($id);
+        $this->data['rows']        = $this->sales_model->getAllInvoiceItems($id); // 要改成取用sale_items_tmp資料
         $this->data['return_sale'] = $inv->return_id ? $this->sales_model->getInvoiceByID($inv->return_id) : null;
         $this->data['return_rows'] = $inv->return_id ? $this->sales_model->getAllInvoiceItems($inv->return_id) : null;
         $this->data['attachments'] = $this->site->getAttachments($id, 'sale');
@@ -2095,19 +2095,33 @@ class Sales extends MY_Controller
         $this->sma->send_json([['id' => $row->id, 'text' => ($row->company && $row->company != '-' ? $row->company : $row->name)]]);
     }
 
-    public function getUploadsTmp()
+    public function getSalesTmp($warehouse_id = null)
     {
+        $this->sma->checkPermissions('index');
+        if ((!$this->Owner || !$this->Admin) && !$warehouse_id) {
+            $user         = $this->site->getUser();
+            $warehouse_id = $user->warehouse_id;
+        }
         $this->load->library('datatables');
-        $this->datatables
-            ->select('id, company, name, email, phone, price_group_name, customer_group_name, vat_no, gst_no, deposit_amount, award_points')
-            ->from('companies')
-            ->where('group_name', 'customer')
-            ->add_column('Actions', "<div class=\"text-center\"><a class=\"tip\" title='" . lang('list_deposits') . "' href='" . admin_url('customers/deposits/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-money\"></i></a> <a class=\"tip\" title='" . lang('add_deposit') . "' href='" . admin_url('customers/add_deposit/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-plus\"></i></a> <a class=\"tip\" title='" . lang('list_addresses') . "' href='" . admin_url('customers/addresses/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-location-arrow\"></i></a> <a class=\"tip\" title='" . lang('list_users') . "' href='" . admin_url('customers/users/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-users\"></i></a> <a class=\"tip\" title='" . lang('add_user') . "' href='" . admin_url('customers/add_user/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-user-plus\"></i></a> <a class=\"tip\" title='" . lang('edit_customer') . "' href='" . admin_url('customers/edit/$1') . "' data-toggle='modal' data-target='#myModal'><i class=\"fa fa-edit\"></i></a> <a href='#' class='tip po' title='<b>" . lang('delete_customer') . "</b>' data-content=\"<p>" . lang('r_u_sure') . "</p><a class='btn btn-danger po-delete' href='" . admin_url('customers/delete/$1') . "'>" . lang('i_m_sure') . "</a> <button class='btn po-close'>" . lang('no') . "</button>\"  rel='popover'><i class=\"fa fa-trash-o\"></i></a></div>", 'id');
-        //->unset_column('id');
+        if ($warehouse_id) {
+            $this->datatables
+                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, sale_status")
+                ->from('sales_tmp')
+                ->where('warehouse_id', $warehouse_id);
+        } else {
+            $this->datatables
+                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, sale_status")
+                ->from('sales_tmp');
+        }
+        if (!$this->Customer && !$this->Supplier && !$this->Owner && !$this->Admin && !$this->session->userdata('view_right')) {
+            $this->datatables->where('created_by', $this->session->userdata('user_id'));
+        } elseif ($this->Customer) {
+            $this->datatables->where('customer_id', $this->session->userdata('user_id'));
+        }
         echo $this->datatables->generate();
     }
 
-    public function uploadsTmp()
+    public function salesTmp($warehouse_id = null)
     {
         ini_set('memory_limit', '1024M');
 
@@ -2150,7 +2164,6 @@ class Sales extends MY_Controller
                     $file_type = 2;
                 }
 
-                $errorID = array();
                 $data = array();
 
                 for($row = 2; $row <= $highest_row_index; $row++) { // 行
@@ -2176,7 +2189,6 @@ class Sales extends MY_Controller
                             $needed['date'] = $item['結帳時間'];
                             $needed['sale_items'] = $item['賣家自用料號'];
                             $needed['note'] = $item['給賣家的話'];
-                            // $needed['staff_note'] = $item['備註']; 露天無此欄位
                             $needed['total'] = (int)$item['數量']*(int)$item['單價'];
                             $needed['grand_total'] = $item['結帳總金額'];
                             $needed['shipping'] = $item['運費'];
@@ -2192,7 +2204,7 @@ class Sales extends MY_Controller
                     $needed['customer'] .= $item['買家帳號'];
                     $needed['created_by'] = $this->session->userdata('user_id');
 
-                    if ($this->sales_model->getSalesByRef($needed['reference_no']) || $this->sales_model->getUploadsTmpByRef($needed['reference_no'])) {
+                    if ($this->sales_model->getSalesByRef($needed['reference_no']) || $this->sales_model->getSalesTmpByRef($needed['reference_no'])) {
                         $needed['upload_status'] += 2; // 訂單重複
                     }
                     if ($product_details = $this->sales_model->getProductByCode($needed['sale_items'])) {
@@ -2221,18 +2233,31 @@ class Sales extends MY_Controller
                     $needed['customer_id'] = $customer->id;
                     $data[] = $needed;
                 }
-                if ($this->sales_model->addUploadsTmps($data)) {
+                if ($this->sales_model->addSalesTmps($data)) {
                     $this->session->set_flashdata('message', $this->lang->line('sale_uploaded'));
-                    admin_redirect('sales/uploadsTmp');
+                    admin_redirect('sales/salesTmp');
                 } else {
-                    $this->session->set_flashdata('message', $this->lang->line('sale_uploaded_failed'));
-                    admin_redirect('sales/uploadsTmp');
+                    $this->session->set_flashdata('error', $this->lang->line('sale_uploaded_failed'));
+                    admin_redirect('sales/salesTmp');
                 }
             } else {
-                $this->data['uploadstmps'] = $this->sales_model->getLatestUploadsTmps();
-                $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('uploadsTmp')]];
-                $meta = ['page_title' => lang('uploadsTmp'), 'bc' => $bc];
-                $this->page_construct('sales/uploadsTmp', $meta, $this->data);
+                $this->sma->checkPermissions();
+
+                $this->data['error'] = (validation_errors()) ? validation_errors() : $this->session->flashdata('error');
+                if ($this->Owner || $this->Admin || !$this->session->userdata('warehouse_id')) {
+                    $this->data['warehouses']   = $this->site->getAllWarehouses();
+                    $this->data['warehouse_id'] = $warehouse_id;
+                    $this->data['warehouse']    = $warehouse_id ? $this->site->getWarehouseByID($warehouse_id) : null;
+                } else {
+                    $this->data['warehouses']   = null;
+                    $this->data['warehouse_id'] = $this->session->userdata('warehouse_id');
+                    $this->data['warehouse']    = $this->session->userdata('warehouse_id') ? $this->site->getWarehouseByID($this->session->userdata('warehouse_id')) : null;
+                }
+
+                $this->data['GP'] = 'sufficient_stock-index';
+                $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('sales_tmp')]];
+                $meta = ['page_title' => lang('sales_tmp'), 'bc' => $bc];
+                $this->page_construct('sales/salesTmp', $meta, $this->data);
             }
         }
     }
