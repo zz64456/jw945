@@ -254,9 +254,6 @@ class Sales_model extends CI_Model
         } elseif ($return_id) {
             $this->db->where('sale_id', $return_id);
         }
-        $a = $this->db->get_compiled_select('sale_items_tmp');
-        echo "SQL:<br>";
-        echo $a;
         $q = $this->db->get('sale_items_tmp');
         if ($q->num_rows() > 0) {
             foreach (($q->result()) as $row) {
@@ -429,7 +426,25 @@ class Sales_model extends CI_Model
 
     public function getProductByCode($code)
     {
+        if (!$code) {
+            return false;
+        }
         $q = $this->db->get_where('products', ['code' => $code], 1);
+        if ($q->num_rows() < 1) { // 1451-9026 找不到 -> 找1451
+            $code_arr = explode("-", $code);
+            $pattern = "/^(?=(.{4})$)(9)\d+$/";
+            preg_match($pattern, end($code_arr), $matches);
+            if (!empty($matches[0])) {
+                unset($code_arr[count($code_arr)-1]);
+                $code = implode("-", $code_arr);
+            }
+            $q = $this->db->get_where('products', ['code' => $code], 1);
+        }
+        if ($q->num_rows() < 1) { // 1451-1 找不到 -> 找1451-1-9xxx
+            $sql = "SELECT * from `sma_products` where `code` LIKE '$code-9%'";
+            $q = $this->db->query($sql);
+            return $q->row();
+        }
         if ($q->num_rows() > 0) {
             return $q->row();
         }
@@ -1012,6 +1027,17 @@ class Sales_model extends CI_Model
     public function addSalesTmp($data = []){
         if ($this->db->insert('sales_tmp', $data)) {
             return $this->db->insert_id();
+        } else {
+            return false;
+        }
+    }
+
+    public function addSaleItemsTmps($data = []){
+        $this->db->trans_start();
+        $result = $this->db->insert_batch('sale_items_tmp', $data);
+        $this->db->trans_complete();
+        if ($result) {
+            return true;
         } else {
             return false;
         }

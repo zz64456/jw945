@@ -1619,9 +1619,11 @@ class Sales extends MY_Controller
             $id = $this->input->get('id');
         }
         $this->data['error'] = (validation_errors()) ? validation_errors() : $this->session->flashdata('error');
-        $inv                 = $this->sales_model->getInvoiceByID($id);
+
         if ($table) {
-            $inv             = $this->sales_model->getSalesTmpByID($id);
+            $inv             = $this->sales_model->getSalesTmpByID($id); // 改成取用sales_tmp資料
+        } else {
+            $inv             = $this->sales_model->getInvoiceByID($id);
         }
         if (!$this->session->userdata('view_right')) {
             $this->sma->view_rights($inv->created_by, true);
@@ -1632,12 +1634,20 @@ class Sales extends MY_Controller
         $this->data['updated_by']  = $inv->updated_by ? $this->site->getUser($inv->updated_by) : null;
         $this->data['warehouse']   = $this->site->getWarehouseByID($inv->warehouse_id);
         $this->data['inv']         = $inv;
-        $this->data['rows']        = $this->sales_model->getAllInvoiceItems($id); // 要改成取用sale_items_tmp資料
+        if ($table) {
+            $this->data['rows']        = $this->sales_model->getAllInvoiceItems_sale_items_tmp($id); // 改成取用sale_items_tmp資料
+        } else {
+            $this->data['rows']        = $this->sales_model->getAllInvoiceItems($id);
+        }
         $this->data['return_sale'] = $inv->return_id ? $this->sales_model->getInvoiceByID($inv->return_id) : null;
         $this->data['return_rows'] = $inv->return_id ? $this->sales_model->getAllInvoiceItems($inv->return_id) : null;
         $this->data['attachments'] = $this->site->getAttachments($id, 'sale');
 
-        $this->load->view($this->theme . 'sales/modal_view', $this->data);
+        if ($table) {
+            $this->load->view($this->theme . 'sales/modal_view_tmp', $this->data);
+        } else {
+            $this->load->view($this->theme . 'sales/modal_view', $this->data);
+        }
     }
 
     public function packaging($id)
@@ -2164,7 +2174,9 @@ class Sales extends MY_Controller
                     $file_type = 2;
                 }
 
-                $data = array();
+                $sales_dataset = array();
+                $sale_items_dataset = array();
+                $failed_sale_items = array();
 
                 for($row = 2; $row <= $highest_row_index; $row++) { // 行
                     $item = [];
@@ -2172,74 +2184,155 @@ class Sales extends MY_Controller
                         $row_value = $sheet->getCellByColumnAndRow($title_index+1, $row)->getFormattedValue();
                         $item[$title_value] = $row_value;
                     }
-                    $needed = array();
-                    switch ($file_type){
-                        case 1: // 蝦皮
-                            $needed['date'] = $item['訂單成立日期'];
-                            $needed['sale_items'] = $item['商品選項貨號'];
-                            $needed['note'] = $item['買家備註'];
-                            $needed['staff_note'] = $item['備註'];
-                            $needed['total'] = $item['商品總價'];
-                            $needed['grand_total'] = $item['買家總支付金額'];
-                            $needed['shipping'] = $item['買家支付運費'];
-                            $needed['customer'] = '蝦皮 ';
-                            break;
 
-                        case 2: // 露天
-                            $needed['date'] = $item['結帳時間'];
-                            $needed['sale_items'] = $item['賣家自用料號'];
-                            $needed['note'] = $item['給賣家的話'];
-                            $needed['total'] = (int)$item['數量']*(int)$item['單價'];
-                            $needed['grand_total'] = $item['結帳總金額'];
-                            $needed['shipping'] = $item['運費'];
-                            $needed['customer'] = '露天 ';
-                            break;
+                    if (strlen($item['訂單編號']) == 0) { // 跳過csv空列
+                        continue;
                     }
 
-                    /* upload_status : 0->庫存正常  1->庫存不足  2->待確認[訂單重複]  4->待確認[料號不齊]  9->已上傳 */
-                    $needed['upload_status'] = 0;
-                    $needed['reference_no'] = $item['訂單編號'];
-                    $needed['biller_id'] = 3;
-                    $needed['biller'] = '詠強有限公司';
-                    $needed['customer'] .= $item['買家帳號'];
-                    $needed['created_by'] = $this->session->userdata('user_id');
+                    $reference_nos = array_column($sales_dataset, 'reference_no');
+                    $sales_dataset_index = array_search($item['訂單編號'], $reference_nos);
+                    if (!is_int($sales_dataset_index)) {
+                        /** 訂單編號尚未存在 */
+                        switch ($file_type) {
+                            case 1: // 蝦皮
+                                $sales['date'] = $item['訂單成立日期'];
+                                $sales['sale_items'] = $item['商品選項貨號'];
+                                $sales['note'] = $item['買家備註'];
+                                $sales['staff_note'] = $item['備註'];
+                                $sales['total'] = $item['商品總價'];
+                                $sales['product_discount'] = $item['商品原價'] - $item['商品活動價格']; // 放在sales裡怪怪的，應放在sale_items
+                                $sales['order_discount_id'] = 0;
+                                $sales['order_discount'] = $item['成交手續費'] + $item['活動服務費'] + $item['金流服務費'];
+                                $sales['total_discount'] = $sales['product_discount'] + $sales['order_discount'];
+                                $sales['grand_total'] = $item['商品總價'] - $sales['order_discount'];
+                                $sales['total_items'] = (int)$item['數量']; // 自行計算,該筆訂單所有的商品數量合計
+                                $sales['shipping'] = 0; // 一律都設為0,即可因平台是買家付錢給蝦皮,為避免合計錯誤
+                                $sales['customer'] = '蝦皮 ';
+                                break;
 
-                    if ($this->sales_model->getSalesByRef($needed['reference_no']) || $this->sales_model->getSalesTmpByRef($needed['reference_no'])) {
-                        $needed['upload_status'] += 2; // 訂單重複
-                    }
-                    if ($product_details = $this->sales_model->getProductByCode($needed['sale_items'])) {
-                        if ($needed['sale_items'] > $product_details->quantity) {
-                            $needed['upload_status'] += 1; // 庫存不足
+                            case 2: // 露天
+                                $sales['date'] = $item['結帳時間'];
+                                $sales['sale_items'] = $item['賣家自用料號'];
+                                $sales['note'] = $item['給賣家的話'];
+                                $sales['total'] = $this->sma->formatDecimal((int)$item['數量']*(int)$item['單價']); // 該筆訂單商品總金額，未扣除任何折扣
+                                $sales['product_discount'] = 0;
+                                $sales['order_discount_id'] = 0;
+                                $sales['order_discount'] = $item['露天折扣碼金額'] + $item['賣家折扣碼金額'] + $item['露幣折抵金額'];
+                                $sales['total_discount'] = $sales['product_discount'] + $sales['order_discount'];
+                                $sales['grand_total'] = $item['結帳總金額']; // 結帳總金額，已扣除所有折扣
+                                $sales['total_items'] = (int)$item['數量']; // 自行計算，該筆訂單所有的商品數量合計
+                                $sales['shipping'] = $item['運費'];
+                                $sales['customer'] = '露天 ';
+                                break;
                         }
+
+                        /* upload_status : 0->庫存正常  1->庫存不足  2->待確認[訂單重複]  3->待確認[料號不齊]  4->已上傳 */
+                        $sales['upload_status'] = '0';
+                        $sales['reference_no'] = $item['訂單編號'];
+                        $sales['biller_id'] = 3;
+                        $sales['biller'] = '詠強有限公司';
+                        $sales['customer'] .= $item['買家帳號'];
+                        $sales['created_by'] = $this->session->userdata('user_id');
+
+                        $customer = $this->companies_model->getCustomerByName($sales['customer']);
+                        if (!$customer) {
+                            $customer = array(
+                                'group_id' => 3,
+                                'group_name' => 'customer',
+                                'customer_group_id' => $file_type == 1 ? 6 : 5,
+                                'customer_group_name' => $file_type == 1 ? '蝦皮客戶' : '露天客戶',
+                                'name' => $sales['customer'],
+                                'company' => $sales['customer'],
+                                'logo' => 'logo.png',
+                                'price_group_id' => 1,
+                                'price_group_name' => 'Default',
+                            );
+                            $companyId = $this->companies_model->addCompany($customer);
+                            $customer = $this->companies_model->getCompanyByID($companyId);
+                        }
+                        $sales['customer_id'] = $customer->id;
+
+                        if ($this->sales_model->getSalesByRef($sales['reference_no']) || $this->sales_model->getSalesTmpByRef($sales['reference_no'])) {
+                            $sales['upload_status'] .= ',2'; // 訂單重複
+                        }
+
+                        if ($product_details = $this->sales_model->getProductByCode($sales['sale_items'])) {
+                            $item['product_id']     = $product_details->id;
+                            $item['product_code']   = $product_details->code;
+                            $item['product_name']   = $product_details->name;
+                            $item['net_unit_price'] = $product_details->price;
+                            if ($sales['total_items'] > $product_details->quantity) {
+                                $sales['upload_status'] .= ',1'; // 庫存不足
+                            }
+                        } else {
+                            $sales['upload_status'] .= ',4'; // 料號不齊
+                            $item['product_id']   = '';
+                            $item['product_code'] = '';
+                            $item['product_name'] = '';
+                            $item['net_unit_price'] = '';
+                        }
+
+                        $sales_dataset[] = $sales;
                     } else {
-                        $needed['upload_status'] += 4; // 料號不齊
+                        /** 訂單編號已存在 */
+
+                        $sales_dataset[$sales_dataset_index]['total_items'] += (int)$item['數量'];
+                        if ($file_type == 1) {
+                            $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['商品選項貨號'];
+                        } else {
+                            $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['賣家自用料號'];
+                        }
+                        if ($product_details = $this->sales_model->getProductByCode($file_type == 1 ? $item['商品選項貨號'] : $item['賣家自用料號'])) {
+                            $item['product_id']     = $product_details->id;
+                            $item['product_code']   = $product_details->code;
+                            $item['product_name']   = $product_details->name;
+                            $item['net_unit_price'] = $product_details->price;
+                            if ($item['數量'] > $product_details->quantity) {
+                                if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '1') === false) {
+                                    $sales_dataset[$sales_dataset_index]['upload_status'] .= ',1'; // 庫存不足
+                                }
+                            }
+                        } else {
+                            $item['product_id']   = '';
+                            $item['product_code'] = '';
+                            $item['product_name'] = '';
+                            $item['net_unit_price'] = '';
+                            if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '4') === false) {
+                                $sales_dataset[$sales_dataset_index]['upload_status'] .= ',4'; // 料號不齊
+                            }
+                        }
                     }
-                    $customer = $this->companies_model->getCustomerByName($needed['customer']);
-                    if (!$customer) {
-                        $customer = array(
-                            'group_id' => 3,
-                            'group_name' => 'customer',
-                            'customer_group_id' => $file_type==1 ? 6 : 5,
-                            'customer_group_name' => $file_type==1 ? '蝦皮客戶' : '露天客戶',
-                            'name' => $needed['customer'],
-                            'company' => $needed['customer'],
-                            'logo' => 'logo.png',
-                            'price_group_id' => 1,
-                            'price_group_name' => 'Default',
-                        );
-                        $companyId = $this->companies_model->addCompany($customer);
-                        $customer = $this->companies_model->getCompanyByID($companyId);
+                    $sale_item = array(
+                        'reference_no' => $item['訂單編號'],
+                        'product_id' => $item['product_id'],
+                        'product_code' => $item['product_code'],
+                        'product_name' => $item['product_name'],
+                        'net_unit_price' => $item['net_unit_price'],
+                        'quantity' => $item['數量'],
+                        'subtotal' => $file_type == 1 ? $this->sma->formatDecimal((int)$item['商品活動價格']*(int)$item['數量']) : $this->sma->formatDecimal((int)$item['單價']*(int)$item['數量']),
+                        'unit_quantity' => $item['數量']
+                    );
+                    $sale_items_dataset[$item['訂單編號']][] = $sale_item;
+                }
+
+                // 寫入sales_tmp & sale_items_tmp
+                if (!$this->sales_model->addSalesTmps($sales_dataset)) {
+                    $this->session->set_flashdata('error', $this->lang->line('sale_uploaded_failed')."-1");
+                    admin_redirect('sales/salesTmp');
+                }
+                foreach ($sale_items_dataset as $order_index => $sale_orders){
+                    foreach ($sale_orders as $item_index => $sale_item) {
+                        $sales = $this->sales_model->getSalesTmpByRef($sale_item['reference_no']);
+                        $sale_item['sale_id'] = $sales->id;
+                        $sale_items_dataset[$order_index][$item_index]['sale_id'] = $sales->id;
                     }
-                    $needed['customer_id'] = $customer->id;
-                    $data[] = $needed;
+                    if (!$this->sales_model->addSaleItemsTmps($sale_items_dataset[$order_index])) {
+                        $this->session->set_flashdata('error', $this->lang->line('sale_uploaded_failed')."-2");
+                        admin_redirect('sales/salesTmp');
+                    }
                 }
-                if ($this->sales_model->addSalesTmps($data)) {
-                    $this->session->set_flashdata('message', $this->lang->line('sale_uploaded'));
-                    admin_redirect('sales/salesTmp');
-                } else {
-                    $this->session->set_flashdata('error', $this->lang->line('sale_uploaded_failed'));
-                    admin_redirect('sales/salesTmp');
-                }
+                admin_redirect('sales/salesTmp');
+
             } else {
                 $this->sma->checkPermissions();
 
