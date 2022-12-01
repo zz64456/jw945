@@ -405,7 +405,7 @@
                         <?php if (!$inv->sale_id) {
                             ?>
                         <div class="btn-group">
-                            <a href="<?= admin_url('sales/edit/' . $inv->id) ?>" class="tip btn btn-warning sledit" title="<?= lang('edit') ?>">
+                            <a href="<?= admin_url('sales/edit_tmp/' . $inv->id) ?>" class="tip btn btn-warning sledit" title="<?= lang('edit') ?>">
                                 <i class="fa fa-edit"></i>
                                 <span class="hidden-sm hidden-xs"><?= lang('edit') ?></span>
                             </a>

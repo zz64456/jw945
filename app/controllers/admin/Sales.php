@@ -782,6 +782,94 @@ class Sales extends MY_Controller
 
     /* ------------------------------------------------------------------------ */
 
+    public function edit_tmp($id = null) {
+        $this->sma->checkPermissions();
+
+        if ($this->input->get('id')) {
+            $id = $this->input->get('id');
+        }
+        $inv = $this->sales_model->getSalesTmpByID($id); // 改成取用sales_tmp資料
+
+        $this->data['inv'] = $inv;
+
+        $inv_items = $this->sales_model->getAllInvoiceItems_sale_items_tmp($id); // 改成取用sale_items_tmp資料
+
+        $c = rand(100000, 9999999);
+        foreach ($inv_items as $inv_item_index => $item) {
+
+            $row = $this->sales_model->getWarehouseProduct($item->product_id, $item->warehouse_id);
+            if (!$row) {
+                $row             = json_decode('{}');
+                $row->tax_method = 0;
+                $row->quantity   = 0;
+            } else {
+                unset($row->cost, $row->details, $row->product_details, $row->image, $row->barcode_symbology, $row->cf1, $row->cf2, $row->cf3, $row->cf4, $row->cf5, $row->cf6, $row->supplier1price, $row->supplier2price, $row->cfsupplier3price, $row->supplier4price, $row->supplier5price, $row->supplier1, $row->supplier2, $row->supplier3, $row->supplier4, $row->supplier5, $row->supplier1_part_no, $row->supplier2_part_no, $row->supplier3_part_no, $row->supplier4_part_no, $row->supplier5_part_no);
+            }
+            $pis = $this->site->getPurchasedItems($item->product_id, $item->warehouse_id, $item->option_id);
+            if ($pis) {
+                $row->quantity = 0;
+                foreach ($pis as $pi) {
+                    $row->quantity += $pi->quantity_balance;
+                }
+            }
+            $row->id              = $item->product_id;
+            $row->code            = $item->product_code;
+            $row->name            = $item->product_name;
+            $row->type            = $item->product_type;
+            $row->status          = $item->status;
+            $row->base_quantity   = $item->quantity;
+            $row->base_unit       = !empty($row->unit) ? $row->unit : $item->product_unit_id;
+            $row->base_unit_price = !empty($row->price) ? $row->price : $item->unit_price;
+            $row->unit            = $item->product_unit_id;
+            $row->qty             = $item->unit_quantity;
+            $row->quantity += $item->quantity;
+            $row->discount        = $item->discount ? $item->discount : '0';
+            $row->item_tax        = $item->item_tax      > 0 ? $item->item_tax      / $item->quantity : 0;
+            $row->item_discount   = $item->item_discount > 0 ? $item->item_discount / $item->quantity : 0;
+            $row->price           = $this->sma->formatDecimal($item->net_unit_price + $this->sma->formatDecimal($row->item_discount));
+            $row->unit_price      = $row->tax_method ? $item->unit_price + $this->sma->formatDecimal($row->item_discount) + $this->sma->formatDecimal($row->item_tax) : $item->unit_price + ($row->item_discount);
+            $row->real_unit_price = $item->real_unit_price;
+            $row->tax_rate        = $item->tax_rate_id;
+            $row->serial          = $item->serial_no;
+            $row->option          = $item->option_id;
+            $options              = $this->sales_model->getProductOptions($row->id, $item->warehouse_id, true);
+            if ($options) {
+                foreach ($options as $option) {
+                    $pis = $this->site->getPurchasedItems($row->id, $item->warehouse_id, $item->option_id);
+                    if ($pis) {
+                        $option->quantity = 0;
+                        foreach ($pis as $pi) {
+                            $option->quantity += $pi->quantity_balance;
+                        }
+                    }
+                    if ($row->option == $option->id) {
+                        $option->quantity += $item->quantity;
+                    }
+                }
+            }
+            $combo_items = false;
+            if ($row->type == 'combo') {
+                $combo_items = $this->sales_model->getProductComboItems($row->id, $item->warehouse_id);
+                $te          = $combo_items;
+                foreach ($combo_items as $combo_item) {
+                    $combo_item->quantity = $combo_item->qty * $item->quantity;
+                }
+            }
+            $units    = !empty($row->base_unit) ? $this->site->getUnitsByBUID($row->base_unit) : null;
+            $tax_rate = $this->site->getTaxRateByID($row->tax_rate);
+            $ri       = $row->id ? $row->id : $c;
+
+            $pr[$ri] = ['id' => $c, 'item_id' => $row->id, 'label' => $row->name . ' (' . $row->code . ')',
+                'row'        => $row, 'combo_items' => $combo_items, 'tax_rate' => $tax_rate, 'units' => $units, 'options' => $options,
+                'status' => $row->status];
+            $c++;
+        }
+        $this->data['inv_items'] = json_encode($pr);
+        $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => admin_url('sales/salesTmp'), 'page' => lang('sales_tmp')], ['link' => '#', 'page' => lang('edit_sale_tmp')]];
+        $meta = ['page_title' => lang('edit_sale_tmp'), 'bc' => $bc];
+        $this->page_construct('sales/edit_tmp', $meta, $this->data);
+    }
+
     public function edit($id = null)
     {
         $this->sma->checkPermissions();
@@ -976,6 +1064,8 @@ class Sales extends MY_Controller
             $c = rand(100000, 9999999);
             foreach ($inv_items as $item) {
                 // $row = $this->site->getProductByID($item->product_id);
+//                dump($item);
+//                exit;
                 $row = $this->sales_model->getWarehouseProduct($item->product_id, $item->warehouse_id);
                 if (!$row) {
                     $row             = json_decode('{}');
@@ -1042,6 +1132,8 @@ class Sales extends MY_Controller
                     'row'        => $row, 'combo_items' => $combo_items, 'tax_rate' => $tax_rate, 'units' => $units, 'options' => $options, ];
                 $c++;
             }
+//            dump($pr);
+//            exit;
 
             $this->data['inv_items'] = json_encode($pr);
             $this->data['id']        = $id;
@@ -1050,6 +1142,9 @@ class Sales extends MY_Controller
             $this->data['units']      = $this->site->getAllBaseUnits();
             $this->data['tax_rates']  = $this->site->getAllTaxRates();
             $this->data['warehouses'] = $this->site->getAllWarehouses();
+
+//            dump($this->data);
+//            exit;
 
             $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('edit_sale')]];
             $meta = ['page_title' => lang('edit_sale'), 'bc' => $bc];
@@ -2231,6 +2326,7 @@ class Sales extends MY_Controller
                         $sales['reference_no'] = $item['訂單編號'];
                         $sales['biller_id'] = 3;
                         $sales['biller'] = '詠強有限公司';
+                        $sales['warehouse_id'] = 1;
                         $sales['customer'] .= $item['買家帳號'];
                         $sales['created_by'] = $this->session->userdata('user_id');
 
@@ -2255,63 +2351,65 @@ class Sales extends MY_Controller
                         if ($this->sales_model->getSalesByRef($sales['reference_no']) || $this->sales_model->getSalesTmpByRef($sales['reference_no'])) {
                             $sales['upload_status'] .= ',2'; // 訂單重複
                         }
-
-                        if ($product_details = $this->sales_model->getProductByCode($sales['sale_items'])) {
-                            $item['product_id']     = $product_details->id;
-                            $item['product_code']   = $product_details->code;
-                            $item['product_name']   = $product_details->name;
-                            $item['net_unit_price'] = $product_details->price;
-                            if ($sales['total_items'] > $product_details->quantity) {
-                                $sales['upload_status'] .= ',1'; // 庫存不足
-                            }
-                        } else {
-                            $sales['upload_status'] .= ',4'; // 料號不齊
-                            $item['product_id']   = '';
-                            $item['product_code'] = '';
-                            $item['product_name'] = '';
-                            $item['net_unit_price'] = '';
-                        }
-
+                        // 放入訂單陣列
                         $sales_dataset[] = $sales;
+                    }
+                    /**
+                     * 以上多為 訂單(sales)處理
+                     * 以下多為 訂單項目(sale_items)處理
+                     * 仍有少數例外
+                     */
+                    $sales_dataset[$sales_dataset_index]['total_items'] += (int)$item['數量'];
+                    if ($file_type == 1) {
+                        $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['商品選項貨號'];
                     } else {
-                        /** 訂單編號已存在 */
+                        $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['賣家自用料號'];
+                    }
 
-                        $sales_dataset[$sales_dataset_index]['total_items'] += (int)$item['數量'];
-                        if ($file_type == 1) {
-                            $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['商品選項貨號'];
-                        } else {
-                            $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['賣家自用料號'];
+                    $sale_item['status'] = 0; // 0->正常,1->庫存不足,3->料號不齊
+                    if ($product_details = $this->sales_model->getProductByCode($file_type == 1 ? $item['商品選項貨號'] : $item['賣家自用料號'])) {
+                        $unit     = $this->site->getUnitByID($product_details->unit);
+                        $sale_item['product_id']        = $product_details->id;
+                        $sale_item['product_code']      = $product_details->code;
+                        $sale_item['product_name']      = $product_details->name;
+                        $sale_item['net_unit_price']    = $file_type == 1 ? $item['商品活動價格'] : $item['單價'];
+                        $sale_item['product_type']      = $product_details->type;
+                        $sale_item['unit_price']        = $sale_item['net_unit_price'];
+                        $sale_item['real_unit_price']   = $sale_item['net_unit_price'];
+                        $sale_item['product_unit_id']   = $unit->id;
+                        $sale_item['product_unit_code'] = $unit->code;
+                        if ($item['數量'] > $product_details->quantity) {
+                            if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '1') === false) {
+                                $sales_dataset[$sales_dataset_index]['upload_status'] .= ',1'; // 庫存不足
+                                $sale_item['status'] = 1;
+                            }
                         }
-                        if ($product_details = $this->sales_model->getProductByCode($file_type == 1 ? $item['商品選項貨號'] : $item['賣家自用料號'])) {
-                            $item['product_id']     = $product_details->id;
-                            $item['product_code']   = $product_details->code;
-                            $item['product_name']   = $product_details->name;
-                            $item['net_unit_price'] = $product_details->price;
-                            if ($item['數量'] > $product_details->quantity) {
-                                if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '1') === false) {
-                                    $sales_dataset[$sales_dataset_index]['upload_status'] .= ',1'; // 庫存不足
-                                }
-                            }
-                        } else {
-                            $item['product_id']   = '';
-                            $item['product_code'] = '';
-                            $item['product_name'] = '';
-                            $item['net_unit_price'] = '';
-                            if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '4') === false) {
-                                $sales_dataset[$sales_dataset_index]['upload_status'] .= ',4'; // 料號不齊
-                            }
+                        $sale_item['comment'] = intval(($sale_item['net_unit_price'] - $product_details->price)); // 平台價格與ERP價格 差
+
+                    } else {
+                        $sale_item['product_id']        = '';
+                        $sale_item['product_code']      = $file_type == 1 ? $item['商品選項貨號'] : $item['賣家自用料號'];
+                        $sale_item['product_name']      = $item['商品名稱'];
+                        $sale_item['net_unit_price']    = $file_type == 1 ? $item['商品活動價格'] : $item['單價'];
+                        $sale_item['product_type']      = null;
+                        $sale_item['unit_price']        = $sale_item['net_unit_price'];
+                        $sale_item['real_unit_price']   = $sale_item['net_unit_price'];
+                        $sale_item['product_unit_id']   = null;
+                        $sale_item['product_unit_code'] = null;
+                        $sale_item['comment'] = null;
+                        $sale_item['status'] = 3;
+
+                        if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '3') === false) {
+                            $sales_dataset[$sales_dataset_index]['upload_status'] .= ',3'; // 料號不齊
                         }
                     }
-                    $sale_item = array(
-                        'reference_no' => $item['訂單編號'],
-                        'product_id' => $item['product_id'],
-                        'product_code' => $item['product_code'],
-                        'product_name' => $item['product_name'],
-                        'net_unit_price' => $item['net_unit_price'],
-                        'quantity' => $item['數量'],
-                        'subtotal' => $file_type == 1 ? $this->sma->formatDecimal((int)$item['商品活動價格']*(int)$item['數量']) : $this->sma->formatDecimal((int)$item['單價']*(int)$item['數量']),
-                        'unit_quantity' => $item['數量']
-                    );
+
+                    $sale_item['reference_no'] = $item['訂單編號'];
+                    $sale_item['warehouse_id'] = 1;
+                    $sale_item['quantity'] = $item['數量'];
+                    $sale_item['subtotal'] = $file_type == 1 ? $this->sma->formatDecimal((int)$item['商品活動價格']*(int)$item['數量']) : $this->sma->formatDecimal((int)$item['單價']*(int)$item['數量']);
+                    $sale_item['unit_quantity'] = $item['數量'];
+                    // 放入訂單項目陣列
                     $sale_items_dataset[$item['訂單編號']][] = $sale_item;
                 }
 

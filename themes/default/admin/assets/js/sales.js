@@ -1163,6 +1163,7 @@ function loadItems() {
         product_discount = 0;
         order_discount = 0;
         total_discount = 0;
+        const method = window.location.href.split("/")[5];
 
         $('#slTable tbody').empty();
         slitems = JSON.parse(localStorage.getItem('slitems'));
@@ -1179,6 +1180,7 @@ function loadItems() {
             item.order = item.order ? item.order : new Date().getTime();
             var product_id = item.row.id,
                 item_type = item.row.type,
+                item_status = item.row.status,
                 combo_items = item.combo_items,
                 item_price = item.row.price,
                 item_qty = item.row.qty,
@@ -1280,7 +1282,7 @@ function loadItems() {
                 '" data-item="' +
                 item_id +
                 '" title="Edit" style="cursor:pointer;"></i></td>';
-            if (site.settings.product_serial == 1) {
+            if (site.settings.product_serial == 1 && method == 'edit') {
                 tr_html +=
                     '<td class="text-right"><input class="form-control input-sm rserial" name="serial[]" type="text" id="serial_' +
                     row_no +
@@ -1318,42 +1320,62 @@ function loadItems() {
                 '"><input name="product_base_quantity[]" type="hidden" class="rbase_quantity" value="' +
                 base_quantity +
                 '"></td>';
-            if ((site.settings.product_discount == 1 && allow_discount == 1) || item_discount) {
+            if (method == 'edit') {
+                if ((site.settings.product_discount == 1 && allow_discount == 1) || item_discount) {
+                    tr_html +=
+                        '<td class="text-right"><input class="form-control input-sm rdiscount" name="product_discount[]" type="hidden" id="discount_' +
+                        row_no +
+                        '" value="' +
+                        item_ds +
+                        '"><span class="text-right sdiscount text-danger" id="sdiscount_' +
+                        row_no +
+                        '">' +
+                        formatMoney(0 - item_discount * item_qty) +
+                        '</span></td>';
+                }
+                if (site.settings.tax1 == 1) {
+                    tr_html +=
+                        '<td class="text-right"><input class="form-control input-sm text-right rproduct_tax" name="product_tax[]" type="hidden" id="product_tax_' +
+                        row_no +
+                        '" value="' +
+                        pr_tax.id +
+                        '"><span class="text-right sproduct_tax" id="sproduct_tax_' +
+                        row_no +
+                        '">' +
+                        (parseFloat(pr_tax_rate) != 0 ? '(' + formatDecimal(pr_tax_rate) + ')' : '') +
+                        ' ' +
+                        formatMoney(pr_tax_val * item_qty) +
+                        '</span></td>';
+                }
                 tr_html +=
-                    '<td class="text-right"><input class="form-control input-sm rdiscount" name="product_discount[]" type="hidden" id="discount_' +
-                    row_no +
-                    '" value="' +
-                    item_ds +
-                    '"><span class="text-right sdiscount text-danger" id="sdiscount_' +
+                    '<td class="text-right"><span class="text-right ssubtotal" id="subtotal_' +
                     row_no +
                     '">' +
-                    formatMoney(0 - item_discount * item_qty) +
+                    formatMoney((parseFloat(item_price) + parseFloat(pr_tax_val)) * parseFloat(item_qty)) +
                     '</span></td>';
-            }
-            if (site.settings.tax1 == 1) {
                 tr_html +=
-                    '<td class="text-right"><input class="form-control input-sm text-right rproduct_tax" name="product_tax[]" type="hidden" id="product_tax_' +
+                    '<td class="text-center"><i class="fa fa-times tip pointer sldel" id="' +
                     row_no +
-                    '" value="' +
-                    pr_tax.id +
-                    '"><span class="text-right sproduct_tax" id="sproduct_tax_' +
+                    '" title="Remove" style="cursor:pointer;"></i></td>';
+            } else if (method == 'edit_tmp') {
+                if (item_status == 1) {
+                    item_status = '庫存不足';
+                    var color_code = '#f79605';
+                } else if (item_status == 3) {
+                    item_status = '料號不齊';
+                    var color_code = ' #d9534f';
+                } else {
+                    item_status = '';
+                }
+                tr_html +=
+                    '<td class="text-right"><span class="text-right" id="sitem_status_' +
                     row_no +
+                    '" style="color: ' +
+                    color_code +
                     '">' +
-                    (parseFloat(pr_tax_rate) != 0 ? '(' + formatDecimal(pr_tax_rate) + ')' : '') +
-                    ' ' +
-                    formatMoney(pr_tax_val * item_qty) +
+                    item_status +
                     '</span></td>';
             }
-            tr_html +=
-                '<td class="text-right"><span class="text-right ssubtotal" id="subtotal_' +
-                row_no +
-                '">' +
-                formatMoney((parseFloat(item_price) + parseFloat(pr_tax_val)) * parseFloat(item_qty)) +
-                '</span></td>';
-            tr_html +=
-                '<td class="text-center"><i class="fa fa-times tip pointer sldel" id="' +
-                row_no +
-                '" title="Remove" style="cursor:pointer;"></i></td>';
             newTr.html(tr_html);
             newTr.prependTo('#slTable');
             total += formatDecimal((parseFloat(item_price) + parseFloat(pr_tax_val)) * parseFloat(item_qty), 4);
@@ -1393,26 +1415,33 @@ function loadItems() {
             }
         });
 
-        var col = 2;
+        var col = method == 'edit' ? 2 : 1;
         if (site.settings.product_serial == 1) {
             col++;
         }
         var tfoot =
             '<tr id="tfoot" class="tfoot active"><th colspan="' +
             col +
-            '">Total</th><th class="text-center">' +
-            formatQty(parseFloat(count) - 1) +
-            '</th>';
-        if ((site.settings.product_discount == 1 && allow_discount == 1) || product_discount) {
-            tfoot += '<th class="text-right">' + formatMoney(product_discount) + '</th>';
+            '">Total</th>';
+        if (method == 'edit') {
+            tfoot += '<th class="text-center">' +
+                formatQty(parseFloat(count) - 1) +
+                '</th>';
+            if ((site.settings.product_discount == 1 && allow_discount == 1) || product_discount) {
+                tfoot += '<th class="text-right">' + formatMoney(product_discount) + '</th>';
+            }
+            if (site.settings.tax1 == 1) {
+                tfoot += '<th class="text-right">' + formatMoney(product_tax) + '</th>';
+            }
+            tfoot +=
+                '<th class="text-right">' +
+                formatMoney(total) +
+                '</th><th class="text-center"><i class="fa fa-trash-o" style="opacity:0.5; filter:alpha(opacity=50);"></i></th></tr>';
+        } else if (method == 'edit_tmp') {
+            tfoot += '<th class="text-center">' +
+                formatQty(parseFloat(count) - 1) +
+                '</th><th></th></tr>';
         }
-        if (site.settings.tax1 == 1) {
-            tfoot += '<th class="text-right">' + formatMoney(product_tax) + '</th>';
-        }
-        tfoot +=
-            '<th class="text-right">' +
-            formatMoney(total) +
-            '</th><th class="text-center"><i class="fa fa-trash-o" style="opacity:0.5; filter:alpha(opacity=50);"></i></th></tr>';
         $('#slTable tfoot').html(tfoot);
 
         // Order level discount calculations

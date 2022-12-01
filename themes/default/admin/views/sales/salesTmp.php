@@ -1,7 +1,6 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 <script>
     $(document).ready(function () {
-        console.log('hi',<?=$Settings->rows_per_page?>)
         oTable = $('#SLData').dataTable({
             "aaSorting": [[1, "desc"], [2, "desc"]],
             "aLengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "<?=lang('all')?>"]],

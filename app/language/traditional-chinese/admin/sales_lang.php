@@ -21,6 +21,7 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 $lang['add_sale']                        = '新增銷售';
 $lang['edit_sale']                       = '編輯銷售';
+$lang['edit_sale_tmp']                   = '編輯上傳之銷售';
 $lang['delete_sale']                     = '刪除銷售';
 $lang['delete_sales']                    = '刪除銷售';
 $lang['sale_added']                      = '銷售新增成功';
