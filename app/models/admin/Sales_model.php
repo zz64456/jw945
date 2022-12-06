@@ -240,7 +240,7 @@ class Sales_model extends CI_Model
         return false;
     }
 
-    public function getAllInvoiceItems_sale_items_tmp($sale_id, $return_id = null)
+    public function getAllInvoiceItems_sale_items_tmp($sale_id)
     {
         $this->db->select('sale_items_tmp.*, tax_rates.code as tax_code, tax_rates.name as tax_name, tax_rates.rate as tax_rate, products.image, products.details as details, product_variants.name as variant, products.hsn_code as hsn_code, products.second_name as second_name, products.unit as base_unit_id, units.code as base_unit_code')
             ->join('products', 'products.id=sale_items_tmp.product_id', 'left')
@@ -248,12 +248,8 @@ class Sales_model extends CI_Model
             ->join('tax_rates', 'tax_rates.id=sale_items_tmp.tax_rate_id', 'left')
             ->join('units', 'units.id=products.unit', 'left')
             ->group_by('sale_items_tmp.id')
-            ->order_by('id', 'asc');
-        if ($sale_id && !$return_id) {
-            $this->db->where('sale_id', $sale_id);
-        } elseif ($return_id) {
-            $this->db->where('sale_id', $return_id);
-        }
+            ->order_by('id', 'asc')
+            ->where('sale_id', $sale_id);
         $q = $this->db->get('sale_items_tmp');
         if ($q->num_rows() > 0) {
             foreach (($q->result()) as $row) {
@@ -1006,7 +1002,7 @@ class Sales_model extends CI_Model
 
     public function getSalesTmpByRef($reference_no)
     {
-        $q = $this->db->get_where('sales_tmp', ['reference_no' => $reference_no], 1);
+        $q = $this->db->order_by('id', 'desc')->get_where('sales_tmp', ['reference_no' => $reference_no], 1); // 為避免重複訂單號，取剛insert進sales_tmp的那一筆
         if ($q->num_rows() > 0) {
             return $q->row();
         }

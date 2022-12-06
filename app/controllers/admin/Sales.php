@@ -1730,9 +1730,12 @@ class Sales extends MY_Controller
         $this->data['warehouse']   = $this->site->getWarehouseByID($inv->warehouse_id);
         $this->data['inv']         = $inv;
         if ($table) {
-            $this->data['rows']        = $this->sales_model->getAllInvoiceItems_sale_items_tmp($id); // 改成取用sale_items_tmp資料
+            $this->data['rows']    = $this->sales_model->getAllInvoiceItems_sale_items_tmp($id); // 改成取用sale_items_tmp資料
         } else {
-            $this->data['rows']        = $this->sales_model->getAllInvoiceItems($id);
+            $this->data['rows']    = $this->sales_model->getAllInvoiceItems($id);
+        }
+        if ($this->data['rows'] === false) {
+            $this->data['rows'] = array();
         }
         $this->data['return_sale'] = $inv->return_id ? $this->sales_model->getInvoiceByID($inv->return_id) : null;
         $this->data['return_rows'] = $inv->return_id ? $this->sales_model->getAllInvoiceItems($inv->return_id) : null;
@@ -2304,7 +2307,7 @@ class Sales extends MY_Controller
                         continue;
                     }
 
-                    $reference_nos = array_column($sales_dataset, 'reference_no');
+                    $reference_nos = array_column($sales_dataset, 'reference_no'); // 該次上傳的訂單號陣列
                     $sales_dataset_index = array_search($item['訂單編號'], $reference_nos);
                     if (!is_int($sales_dataset_index)) {
                         /** 訂單編號尚未存在 */
@@ -2373,6 +2376,8 @@ class Sales extends MY_Controller
                         }
                         // 放入訂單陣列
                         $sales_dataset[] = $sales;
+                        // 標記新訂單索引
+                        $sales_dataset_index = array_search($item['訂單編號'], array_column($sales_dataset, 'reference_no'));
                     }
                     /**
                      * 以上多為 訂單(sales)處理
