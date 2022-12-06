@@ -1043,6 +1043,16 @@ class Sales_model extends CI_Model
         }
     }
 
+    public function delTmps(){
+        $result = $this->db->truncate('sales_tmp');
+        $result2 = $this->db->truncate('sale_items_tmp');
+        if ($result && $result2) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     public function getLatestSalesTmps()
     {
         if ($this->Settings->restrict_user && !$this->Owner && !$this->Admin) {

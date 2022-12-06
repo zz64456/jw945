@@ -2200,7 +2200,7 @@ class Sales extends MY_Controller
         $this->sma->send_json([['id' => $row->id, 'text' => ($row->company && $row->company != '-' ? $row->company : $row->name)]]);
     }
 
-    public function getSalesTmp($warehouse_id = null)
+    public function getSalesTmp($warehouse_id = null, $status = null)
     {
         $this->sma->checkPermissions('index');
         if ((!$this->Owner || !$this->Admin) && !$warehouse_id) {
@@ -2210,12 +2210,12 @@ class Sales extends MY_Controller
         $this->load->library('datatables');
         if ($warehouse_id) {
             $this->datatables
-                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, sale_status")
+                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, upload_status")
                 ->from('sales_tmp')
                 ->where('warehouse_id', $warehouse_id);
         } else {
             $this->datatables
-                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, sale_status")
+                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, upload_status")
                 ->from('sales_tmp');
         }
         if (!$this->Customer && !$this->Supplier && !$this->Owner && !$this->Admin && !$this->session->userdata('view_right')) {
@@ -2223,7 +2223,27 @@ class Sales extends MY_Controller
         } elseif ($this->Customer) {
             $this->datatables->where('customer_id', $this->session->userdata('user_id'));
         }
+        if ($status == 'sufficient_stock') {
+            $this->datatables->where("{$this->db->dbprefix('sales_tmp')}.situation", '0');
+        }
+        if ($status == 'insufficient_stock') {
+            $this->datatables->like("{$this->db->dbprefix('sales_tmp')}.situation", '1');
+        }
+        if ($status == 'wait_to_check') {
+            $this->datatables->like("{$this->db->dbprefix('sales_tmp')}.situation", '2');
+        }
+        if ($status == 'already_uploaded') {
+            $this->datatables->where("{$this->db->dbprefix('sales_tmp')}.situation", '4');
+        }
+
         echo $this->datatables->generate();
+    }
+
+    public function deleteTmps()
+    {
+        $this->sales_model->delTmps();
+        $this->session->set_flashdata('message', lang('delete_successfully'));
+        $this->salesTmp();
     }
 
     public function salesTmp($warehouse_id = null)
@@ -2321,8 +2341,8 @@ class Sales extends MY_Controller
                                 break;
                         }
 
-                        /* upload_status : 0->庫存正常  1->庫存不足  2->待確認[訂單重複]  3->待確認[料號不齊]  4->已上傳 */
-                        $sales['upload_status'] = '0';
+                        /* situation : 0->庫存正常  1->庫存不足  2->待確認[訂單重複][料號不齊]  4->已上傳 */
+                        $sales['situation'] = '0';
                         $sales['reference_no'] = $item['訂單編號'];
                         $sales['biller_id'] = 3;
                         $sales['biller'] = '詠強有限公司';
@@ -2349,7 +2369,7 @@ class Sales extends MY_Controller
                         $sales['customer_id'] = $customer->id;
 
                         if ($this->sales_model->getSalesByRef($sales['reference_no']) || $this->sales_model->getSalesTmpByRef($sales['reference_no'])) {
-                            $sales['upload_status'] .= ',2'; // 訂單重複
+                            $sales['situation'] .= ',2'; // 待確認[訂單重複]
                         }
                         // 放入訂單陣列
                         $sales_dataset[] = $sales;
@@ -2379,8 +2399,8 @@ class Sales extends MY_Controller
                         $sale_item['product_unit_id']   = $unit->id;
                         $sale_item['product_unit_code'] = $unit->code;
                         if ($item['數量'] > $product_details->quantity) {
-                            if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '1') === false) {
-                                $sales_dataset[$sales_dataset_index]['upload_status'] .= ',1'; // 庫存不足
+                            if (strpos($sales_dataset[$sales_dataset_index]['situation'], '1') === false) {
+                                $sales_dataset[$sales_dataset_index]['situation'] .= ',1'; // 庫存不足
                                 $sale_item['status'] = 1;
                             }
                         }
@@ -2399,8 +2419,8 @@ class Sales extends MY_Controller
                         $sale_item['comment'] = null;
                         $sale_item['status'] = 3;
 
-                        if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '3') === false) {
-                            $sales_dataset[$sales_dataset_index]['upload_status'] .= ',3'; // 料號不齊
+                        if (strpos($sales_dataset[$sales_dataset_index]['situation'], '2') === false) {
+                            $sales_dataset[$sales_dataset_index]['situation'] .= ',2'; // 待確認[料號不齊]
                         }
                     }
 
@@ -2445,7 +2465,6 @@ class Sales extends MY_Controller
                     $this->data['warehouse']    = $this->session->userdata('warehouse_id') ? $this->site->getWarehouseByID($this->session->userdata('warehouse_id')) : null;
                 }
 
-                $this->data['GP'] = 'sufficient_stock-index';
                 $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('sales_tmp')]];
                 $meta = ['page_title' => lang('sales_tmp'), 'bc' => $bc];
                 $this->page_construct('sales/salesTmp', $meta, $this->data);

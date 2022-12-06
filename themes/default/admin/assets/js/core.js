@@ -1171,6 +1171,13 @@ function user_status(x) {
               lang['inactive'] +
               '</span><a/>';
 }
+function upload_status(x) {
+    if (x == 'uploaded') {
+        return '<div class="text-center"><span class="upload_status label label-success">' + lang[x] + '</span></div>';
+    } else {
+        return '<div class="text-center"><span class="upload_status label label-warning">' + lang[x] + '</span></div>';
+    }
+}
 function row_status(x) {
     if (x == null) {
         return '';
