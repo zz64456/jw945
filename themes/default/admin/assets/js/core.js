@@ -61,7 +61,7 @@ function cssStyle() {
 $('#csv_file').change(function (e) {
     v = $(this).val();
     if (v != '') {
-        var validExts = new Array('.csv');
+        var validExts = ['.csv', '.xltx', '.xlsx', '.xls'];
         var fileExt = v;
         fileExt = fileExt.substring(fileExt.lastIndexOf('.'));
         if (validExts.indexOf(fileExt) < 0) {
@@ -1386,6 +1386,12 @@ $(document).ready(function () {
     $('body').on('click', '.invoice_link2 td:not(:first-child, :last-child)', function () {
         $('#myModal').modal({
             remote: site.base_url + 'sales/modal_view/' + $(this).closest('tr').attr('id'),
+        });
+        $('#myModal').modal('show');
+    });
+    $('body').on('click', '.invoice_link3 td:not(:first-child, :nth-child(6), :nth-last-child(2), :last-child)', function () {
+        $('#myModal').modal({
+            remote: site.base_url + 'sales/modal_view/' + $(this).parent('.invoice_link3').attr('id') + '/1',
         });
         $('#myModal').modal('show');
     });
