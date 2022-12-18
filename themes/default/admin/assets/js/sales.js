@@ -508,12 +508,20 @@ $(document).ready(function (e) {
     });
 
     /* -----------------------
-     * Edit Row Modal Hanlder
+     * Edit Row Modal Handler
      ----------------------- */
     $(document).on('click', '.edit', function () {
         var row = $(this).closest('tr');
         var row_id = row.attr('id');
         item_id = row.attr('data-item-id');
+        if (item_id == 0) { // 料號不齊
+            id   = row_id.split("_")[1]
+            name = $('#name_'+id).text();
+            $('#row_id').val(row_id);
+            $('#itemModalLabel').text(name);
+            $('#itemModal').appendTo('body').modal('show');
+            return
+        }
         item = slitems[item_id];
         var qty = row.children().children('.rquantity').val(),
             product_option = row.children().children('.roption').val(),
@@ -707,6 +715,25 @@ $(document).ready(function (e) {
                 .val(formatDecimal(item.row.base_unit_price + aprice))
                 .change();
         }
+    });
+
+    /* -----------------------
+     * Edit Row Method: for Upload CSV to rearrange product
+     ----------------------- */
+    $(document).on('click', '#editItem_forUploadCSV', function () {
+        var row = $('#' + $('#row_id').val());
+        var item_id = row.attr('data-item-id')
+        if (item_id == 0) {
+            item_id = $('#row_id').val()
+        }
+        id = item_id.split("_")[1]
+        var code = $('#iproductCode').val();
+        slitems[id].row.code = code;
+        localStorage.setItem('slitems', JSON.stringify(slitems));
+        $('#itemModal').modal('hide');
+        $('#iproductCode').val('') // 清空給其他資料修改使用
+        loadItems();
+        return;
     });
 
     /* -----------------------
@@ -1179,6 +1206,7 @@ function loadItems() {
             var item_id = site.settings.item_addition == 1 ? item.item_id : item.id;
             item.order = item.order ? item.order : new Date().getTime();
             var product_id = item.row.id,
+                item_tmp_id = item.row.item_tmp_id,
                 item_type = item.row.type,
                 item_status = item.row.status,
                 combo_items = item.combo_items,
@@ -1268,6 +1296,8 @@ function loadItems() {
                 item_code +
                 '"><input name="product_name[]" type="hidden" class="rname" value="' +
                 item_name +
+                '"><input name="item_tmp_id[]" type="hidden" class="item_tmp_id" value="' +
+                item_tmp_id +
                 '"><input name="product_option[]" type="hidden" class="roption" value="' +
                 item_option +
                 '"><span class="sname" id="name_' +
@@ -1489,7 +1519,7 @@ function loadItems() {
         }
         $('#tship').text(formatMoney(shipping));
         $('#gtotal').text(formatMoney(gtotal));
-        if (an > parseInt(site.settings.bc_fix) && parseInt(site.settings.bc_fix) > 0) {
+        if (an > parseInt(site.settings.bc_fix) && parseInt(site.settings.bc_fix) > 0 && $("#sticker").length != 0) {
             $('html, body').animate({ scrollTop: $('#sticker').offset().top }, 500);
             $(window).scrollTop($(window).scrollTop() + 1);
         }

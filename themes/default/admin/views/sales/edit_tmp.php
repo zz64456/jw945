@@ -184,6 +184,31 @@ $allow_discount = ($Owner || $Admin || $this->session->userdata('allow_discount'
     </div>
 </div>
 
+<div class="modal" id="itemModal" tabindex="-1" role="dialog" aria-labelledby="itemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true"><i
+                                class="fa fa-2x">&times;</i></span><span class="sr-only">Close</span></button>
+                <h4 class="modal-title" id="itemModalLabel"></h4>
+            </div>
+            <div class="modal-body" id="pr_popover_content">
+                <form class="form-horizontal" role="form">
+                    <div class="form-group">
+                        <label for="iproductCode" class="col-sm-4 control-label"><?= lang('product_code') ?></label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control" id="iproductCode">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="editItem_forUploadCSV"><?= lang('submit') ?></button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal" id="prModal" tabindex="-1" role="dialog" aria-labelledby="prModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -194,21 +219,6 @@ $allow_discount = ($Owner || $Admin || $this->session->userdata('allow_discount'
             </div>
             <div class="modal-body" id="pr_popover_content">
                 <form class="form-horizontal" role="form">
-                    <?php if ($Settings->tax1) {
-                                    ?>
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label"><?= lang('product_tax') ?></label>
-                            <div class="col-sm-8">
-                                <?php
-                                $tr[''] = '';
-                                    foreach ($tax_rates as $tax) {
-                                        $tr[$tax->id] = $tax->name;
-                                    }
-                                    echo form_dropdown('ptax', $tr, '', 'id="ptax" class="form-control pos-input-tip" style="width:100%;"'); ?>
-                            </div>
-                        </div>
-                    <?php
-                                } ?>
                     <?php if ($Settings->product_serial) {
                                     ?>
                         <div class="form-group">

@@ -857,6 +857,21 @@ class Sales_model extends CI_Model
         return false;
     }
 
+    public function updateSaleTmp($id, $code)
+    {
+        $product = $this->getProductByCode($code);
+        if ($product) {
+            $unit = $this->site->getUnitByID($product->unit);
+            dump($id);
+            $this->db->where('id', $id);
+            $this->db->update('sale_items_tmp', ['product_id' => $product->id,'product_code' => $product->code,
+                'product_name' => $product->name,'product_type' => $product->type, 'status' => 0,
+                'product_unit_id' => $unit->id ,'product_unit_code' => $unit->code]);
+        }
+        $saleItem = $this->getSaleItemsTmpBySaleID($id);
+        return $saleItem->sale_id;
+    }
+
     public function updateSale($id, $data, $items = [], $attachments = [])
     {
         $this->db->trans_start();
@@ -991,6 +1006,15 @@ class Sales_model extends CI_Model
         return false;
     }
 
+    public function getSalesTmpByRef($reference_no)
+    {
+        $q = $this->db->order_by('id', 'desc')->get_where('sales_tmp', ['reference_no' => $reference_no], 1); // 為避免重複訂單號，取剛insert進sales_tmp的那一筆
+        if ($q->num_rows() > 0) {
+            return $q->row();
+        }
+        return false;
+    }
+
     public function getSalesTmpByID($id)
     {
         $q = $this->db->get_where('sales_tmp', ['id' => $id], 1);
@@ -1000,9 +1024,9 @@ class Sales_model extends CI_Model
         return false;
     }
 
-    public function getSalesTmpByRef($reference_no)
+    public function getSaleItemsTmpBySaleID($id)
     {
-        $q = $this->db->order_by('id', 'desc')->get_where('sales_tmp', ['reference_no' => $reference_no], 1); // 為避免重複訂單號，取剛insert進sales_tmp的那一筆
+        $q = $this->db->get_where('sale_items_tmp', ['id' => $id], 1);
         if ($q->num_rows() > 0) {
             return $q->row();
         }

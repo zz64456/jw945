@@ -785,8 +785,22 @@ class Sales extends MY_Controller
     public function edit_tmp($id = null) {
         $this->sma->checkPermissions();
 
-        if ($this->input->get('id')) {
-            $id = $this->input->get('id');
+        if ($this->input->method() === 'post') {
+            $item_id   = $this->input->post('item_tmp_id');
+            $product_id   = $this->input->post('product_id');
+            $product_code = $this->input->post('product_code');
+            foreach ($product_id as $index => $pid) {
+                if ($pid == 0) {
+                    $pcode = $product_code[$index];
+                    $id = $this->sales_model->updateSaleTmp($item_id[$index], $pcode);
+                } else {
+                    // 暫不做事
+                }
+            }
+        } else {
+            if ($this->input->get('id')) {
+                $id = $this->input->get('id');
+            }
         }
         $inv = $this->sales_model->getSalesTmpByID($id); // 改成取用sales_tmp資料
 
@@ -812,6 +826,7 @@ class Sales extends MY_Controller
                     $row->quantity += $pi->quantity_balance;
                 }
             }
+            $row->item_tmp_id     = $item->id;
             $row->id              = $item->product_id;
             $row->code            = $item->product_code;
             $row->name            = $item->product_name;
@@ -865,6 +880,7 @@ class Sales extends MY_Controller
             $c++;
         }
         $this->data['inv_items'] = json_encode($pr);
+//        dump($this->data);
         $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => admin_url('sales/salesTmp'), 'page' => lang('sales_tmp')], ['link' => '#', 'page' => lang('edit_sale_tmp')]];
         $meta = ['page_title' => lang('edit_sale_tmp'), 'bc' => $bc];
         $this->page_construct('sales/edit_tmp', $meta, $this->data);
@@ -1063,9 +1079,6 @@ class Sales extends MY_Controller
             // krsort($inv_items);
             $c = rand(100000, 9999999);
             foreach ($inv_items as $item) {
-                // $row = $this->site->getProductByID($item->product_id);
-//                dump($item);
-//                exit;
                 $row = $this->sales_model->getWarehouseProduct($item->product_id, $item->warehouse_id);
                 if (!$row) {
                     $row             = json_decode('{}');
@@ -1132,8 +1145,6 @@ class Sales extends MY_Controller
                     'row'        => $row, 'combo_items' => $combo_items, 'tax_rate' => $tax_rate, 'units' => $units, 'options' => $options, ];
                 $c++;
             }
-//            dump($pr);
-//            exit;
 
             $this->data['inv_items'] = json_encode($pr);
             $this->data['id']        = $id;
@@ -1142,9 +1153,6 @@ class Sales extends MY_Controller
             $this->data['units']      = $this->site->getAllBaseUnits();
             $this->data['tax_rates']  = $this->site->getAllTaxRates();
             $this->data['warehouses'] = $this->site->getAllWarehouses();
-
-//            dump($this->data);
-//            exit;
 
             $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('edit_sale')]];
             $meta = ['page_title' => lang('edit_sale'), 'bc' => $bc];
