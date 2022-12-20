@@ -785,8 +785,22 @@ class Sales extends MY_Controller
     public function edit_tmp($id = null) {
         $this->sma->checkPermissions();
 
-        if ($this->input->get('id')) {
-            $id = $this->input->get('id');
+        if ($this->input->method() === 'post') {
+            $item_id   = $this->input->post('item_tmp_id');
+            $product_id   = $this->input->post('product_id');
+            $product_code = $this->input->post('product_code');
+            foreach ($product_id as $index => $pid) {
+                if ($pid == 0) {
+                    $pcode = $product_code[$index];
+                    $id = $this->sales_model->updateSaleTmp($item_id[$index], $pcode);
+                } else {
+                    // 暫不做事
+                }
+            }
+        } else {
+            if ($this->input->get('id')) {
+                $id = $this->input->get('id');
+            }
         }
         $inv = $this->sales_model->getSalesTmpByID($id); // 改成取用sales_tmp資料
 
@@ -812,6 +826,7 @@ class Sales extends MY_Controller
                     $row->quantity += $pi->quantity_balance;
                 }
             }
+            $row->item_tmp_id     = $item->id;
             $row->id              = $item->product_id;
             $row->code            = $item->product_code;
             $row->name            = $item->product_name;
@@ -865,6 +880,7 @@ class Sales extends MY_Controller
             $c++;
         }
         $this->data['inv_items'] = json_encode($pr);
+//        dump($this->data);
         $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => admin_url('sales/salesTmp'), 'page' => lang('sales_tmp')], ['link' => '#', 'page' => lang('edit_sale_tmp')]];
         $meta = ['page_title' => lang('edit_sale_tmp'), 'bc' => $bc];
         $this->page_construct('sales/edit_tmp', $meta, $this->data);
@@ -1063,9 +1079,6 @@ class Sales extends MY_Controller
             // krsort($inv_items);
             $c = rand(100000, 9999999);
             foreach ($inv_items as $item) {
-                // $row = $this->site->getProductByID($item->product_id);
-//                dump($item);
-//                exit;
                 $row = $this->sales_model->getWarehouseProduct($item->product_id, $item->warehouse_id);
                 if (!$row) {
                     $row             = json_decode('{}');
@@ -1132,8 +1145,6 @@ class Sales extends MY_Controller
                     'row'        => $row, 'combo_items' => $combo_items, 'tax_rate' => $tax_rate, 'units' => $units, 'options' => $options, ];
                 $c++;
             }
-//            dump($pr);
-//            exit;
 
             $this->data['inv_items'] = json_encode($pr);
             $this->data['id']        = $id;
@@ -1142,9 +1153,6 @@ class Sales extends MY_Controller
             $this->data['units']      = $this->site->getAllBaseUnits();
             $this->data['tax_rates']  = $this->site->getAllTaxRates();
             $this->data['warehouses'] = $this->site->getAllWarehouses();
-
-//            dump($this->data);
-//            exit;
 
             $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('edit_sale')]];
             $meta = ['page_title' => lang('edit_sale'), 'bc' => $bc];
@@ -1730,9 +1738,12 @@ class Sales extends MY_Controller
         $this->data['warehouse']   = $this->site->getWarehouseByID($inv->warehouse_id);
         $this->data['inv']         = $inv;
         if ($table) {
-            $this->data['rows']        = $this->sales_model->getAllInvoiceItems_sale_items_tmp($id); // 改成取用sale_items_tmp資料
+            $this->data['rows']    = $this->sales_model->getAllInvoiceItems_sale_items_tmp($id); // 改成取用sale_items_tmp資料
         } else {
-            $this->data['rows']        = $this->sales_model->getAllInvoiceItems($id);
+            $this->data['rows']    = $this->sales_model->getAllInvoiceItems($id);
+        }
+        if ($this->data['rows'] === false) {
+            $this->data['rows'] = array();
         }
         $this->data['return_sale'] = $inv->return_id ? $this->sales_model->getInvoiceByID($inv->return_id) : null;
         $this->data['return_rows'] = $inv->return_id ? $this->sales_model->getAllInvoiceItems($inv->return_id) : null;
@@ -2200,7 +2211,7 @@ class Sales extends MY_Controller
         $this->sma->send_json([['id' => $row->id, 'text' => ($row->company && $row->company != '-' ? $row->company : $row->name)]]);
     }
 
-    public function getSalesTmp($warehouse_id = null)
+    public function getSalesTmp($warehouse_id = null, $status = null)
     {
         $this->sma->checkPermissions('index');
         if ((!$this->Owner || !$this->Admin) && !$warehouse_id) {
@@ -2210,12 +2221,12 @@ class Sales extends MY_Controller
         $this->load->library('datatables');
         if ($warehouse_id) {
             $this->datatables
-                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, sale_status")
+                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, upload_status")
                 ->from('sales_tmp')
                 ->where('warehouse_id', $warehouse_id);
         } else {
             $this->datatables
-                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, sale_status")
+                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, upload_status")
                 ->from('sales_tmp');
         }
         if (!$this->Customer && !$this->Supplier && !$this->Owner && !$this->Admin && !$this->session->userdata('view_right')) {
@@ -2223,7 +2234,35 @@ class Sales extends MY_Controller
         } elseif ($this->Customer) {
             $this->datatables->where('customer_id', $this->session->userdata('user_id'));
         }
+        if ($status == 'sufficient_stock') {
+            $this->datatables->where("{$this->db->dbprefix('sales_tmp')}.situation", '庫存正常');
+        }
+        elseif ($status == 'insufficient_stock') {
+            $this->datatables->like("{$this->db->dbprefix('sales_tmp')}.situation", '庫存不足');
+        }
+        elseif ($status == 'wait_to_check') {
+            $this->datatables->like("{$this->db->dbprefix('sales_tmp')}.situation", '料號不齊');
+            $this->datatables->or_like("{$this->db->dbprefix('sales_tmp')}.situation", '訂單重複');
+//            $this->datatables->select('*');
+//            $this->datatables->join('vendor', 'vendor.vid = products.vendorid');
+//            $expl = explode(',', LOGINZIP);
+//            foreach ($expl as $exp) {
+//                $this->datatables->like('vendor.zip', $exp);
+//            }
+//            $this->datatables->from('products');
+        }
+//        if ($status == 'already_uploaded') {
+//            $this->datatables->where("{$this->db->dbprefix('sales_tmp')}.situation", '4');
+//        }
+
         echo $this->datatables->generate();
+    }
+
+    public function deleteTmps()
+    {
+        $this->sales_model->delTmps();
+        $this->session->set_flashdata('message', lang('delete_successfully'));
+        $this->salesTmp();
     }
 
     public function salesTmp($warehouse_id = null)
@@ -2264,13 +2303,13 @@ class Sales extends MY_Controller
                 }
 
                 $file_type_check = '訂單成立日期';
-                $file_type = 1; // 預設為蝦皮
-                if (!in_array($file_type_check, $title)) { // 找不到$file_type_check則為露天
-                    $file_type = 2;
+                $file_type = '蝦皮'; // 預設為蝦皮
+                if (!in_array($file_type_check, $title)) {
+                    $file_type = '露天';
                 }
 
-                $sales_dataset = array();
-                $sale_items_dataset = array();
+                $sales_dataset = array(); // 訂單陣列，會進sales_tmp
+                $sale_items_dataset = array(); // 訂單項目陣列，會進sale_items_tmp
                 $failed_sale_items = array();
 
                 for($row = 2; $row <= $highest_row_index; $row++) { // 行
@@ -2284,12 +2323,12 @@ class Sales extends MY_Controller
                         continue;
                     }
 
-                    $reference_nos = array_column($sales_dataset, 'reference_no');
+                    $reference_nos = array_column($sales_dataset, 'reference_no'); // 該次上傳的訂單號陣列
                     $sales_dataset_index = array_search($item['訂單編號'], $reference_nos);
                     if (!is_int($sales_dataset_index)) {
                         /** 訂單編號尚未存在 */
                         switch ($file_type) {
-                            case 1: // 蝦皮
+                            case '蝦皮':
                                 $sales['date'] = $item['訂單成立日期'];
                                 $sales['sale_items'] = $item['商品選項貨號'];
                                 $sales['note'] = $item['買家備註'];
@@ -2305,7 +2344,7 @@ class Sales extends MY_Controller
                                 $sales['customer'] = '蝦皮 ';
                                 break;
 
-                            case 2: // 露天
+                            case '露天':
                                 $sales['date'] = $item['結帳時間'];
                                 $sales['sale_items'] = $item['賣家自用料號'];
                                 $sales['note'] = $item['給賣家的話'];
@@ -2321,8 +2360,7 @@ class Sales extends MY_Controller
                                 break;
                         }
 
-                        /* upload_status : 0->庫存正常  1->庫存不足  2->待確認[訂單重複]  3->待確認[料號不齊]  4->已上傳 */
-                        $sales['upload_status'] = '0';
+                        $sales['situation'] = '庫存正常';
                         $sales['reference_no'] = $item['訂單編號'];
                         $sales['biller_id'] = 3;
                         $sales['biller'] = '詠強有限公司';
@@ -2335,8 +2373,8 @@ class Sales extends MY_Controller
                             $customer = array(
                                 'group_id' => 3,
                                 'group_name' => 'customer',
-                                'customer_group_id' => $file_type == 1 ? 6 : 5,
-                                'customer_group_name' => $file_type == 1 ? '蝦皮客戶' : '露天客戶',
+                                'customer_group_id' => $file_type == '蝦皮' ? 6 : 5,
+                                'customer_group_name' => $file_type == '蝦皮' ? '蝦皮客戶' : '露天客戶',
                                 'name' => $sales['customer'],
                                 'company' => $sales['customer'],
                                 'logo' => 'logo.png',
@@ -2349,10 +2387,12 @@ class Sales extends MY_Controller
                         $sales['customer_id'] = $customer->id;
 
                         if ($this->sales_model->getSalesByRef($sales['reference_no']) || $this->sales_model->getSalesTmpByRef($sales['reference_no'])) {
-                            $sales['upload_status'] .= ',2'; // 訂單重複
+                            $sales['situation'] .= ',訂單重複'; // 待確認[訂單重複]
                         }
                         // 放入訂單陣列
                         $sales_dataset[] = $sales;
+                        // 標記新訂單索引
+                        $sales_dataset_index = array_search($item['訂單編號'], array_column($sales_dataset, 'reference_no'));
                     }
                     /**
                      * 以上多為 訂單(sales)處理
@@ -2360,54 +2400,55 @@ class Sales extends MY_Controller
                      * 仍有少數例外
                      */
                     $sales_dataset[$sales_dataset_index]['total_items'] += (int)$item['數量'];
-                    if ($file_type == 1) {
+                    if ($file_type == '蝦皮') {
                         $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['商品選項貨號'];
                     } else {
                         $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['賣家自用料號'];
                     }
 
-                    $sale_item['status'] = 0; // 0->正常,1->庫存不足,3->料號不齊
-                    if ($product_details = $this->sales_model->getProductByCode($file_type == 1 ? $item['商品選項貨號'] : $item['賣家自用料號'])) {
+                    $sale_item['status'] = '庫存正常';
+                    
+                    if ($product_details = $this->sales_model->getProductByCode($file_type == '蝦皮' ? $item['商品選項貨號'] : $item['賣家自用料號'])) {
                         $unit     = $this->site->getUnitByID($product_details->unit);
                         $sale_item['product_id']        = $product_details->id;
                         $sale_item['product_code']      = $product_details->code;
                         $sale_item['product_name']      = $product_details->name;
-                        $sale_item['net_unit_price']    = $file_type == 1 ? $item['商品活動價格'] : $item['單價'];
+                        $sale_item['net_unit_price']    = $file_type == '蝦皮' ? $item['商品活動價格'] : $item['單價'];
                         $sale_item['product_type']      = $product_details->type;
                         $sale_item['unit_price']        = $sale_item['net_unit_price'];
                         $sale_item['real_unit_price']   = $sale_item['net_unit_price'];
                         $sale_item['product_unit_id']   = $unit->id;
                         $sale_item['product_unit_code'] = $unit->code;
                         if ($item['數量'] > $product_details->quantity) {
-                            if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '1') === false) {
-                                $sales_dataset[$sales_dataset_index]['upload_status'] .= ',1'; // 庫存不足
-                                $sale_item['status'] = 1;
+                            if (strpos($sales_dataset[$sales_dataset_index]['situation'], '庫存不足') === false) {
+                                $sales_dataset[$sales_dataset_index]['situation'] .= ',庫存不足'; // 庫存不足
+                                $sale_item['status'] = '庫存不足';
                             }
                         }
                         $sale_item['comment'] = intval(($sale_item['net_unit_price'] - $product_details->price)); // 平台價格與ERP價格 差
 
                     } else {
                         $sale_item['product_id']        = '';
-                        $sale_item['product_code']      = $file_type == 1 ? $item['商品選項貨號'] : $item['賣家自用料號'];
+                        $sale_item['product_code']      = $file_type == '蝦皮' ? $item['商品選項貨號'] : $item['賣家自用料號'];
                         $sale_item['product_name']      = $item['商品名稱'];
-                        $sale_item['net_unit_price']    = $file_type == 1 ? $item['商品活動價格'] : $item['單價'];
+                        $sale_item['net_unit_price']    = $file_type == '蝦皮' ? $item['商品活動價格'] : $item['單價'];
                         $sale_item['product_type']      = null;
                         $sale_item['unit_price']        = $sale_item['net_unit_price'];
                         $sale_item['real_unit_price']   = $sale_item['net_unit_price'];
                         $sale_item['product_unit_id']   = null;
                         $sale_item['product_unit_code'] = null;
                         $sale_item['comment'] = null;
-                        $sale_item['status'] = 3;
+                        $sale_item['status'] = '料號不齊';
 
-                        if (strpos($sales_dataset[$sales_dataset_index]['upload_status'], '3') === false) {
-                            $sales_dataset[$sales_dataset_index]['upload_status'] .= ',3'; // 料號不齊
+                        if (strpos($sales_dataset[$sales_dataset_index]['situation'], '料號不齊') === false) {
+                            $sales_dataset[$sales_dataset_index]['situation'] .= ',料號不齊'; // 待確認[料號不齊]
                         }
                     }
 
                     $sale_item['reference_no'] = $item['訂單編號'];
                     $sale_item['warehouse_id'] = 1;
                     $sale_item['quantity'] = $item['數量'];
-                    $sale_item['subtotal'] = $file_type == 1 ? $this->sma->formatDecimal((int)$item['商品活動價格']*(int)$item['數量']) : $this->sma->formatDecimal((int)$item['單價']*(int)$item['數量']);
+                    $sale_item['subtotal'] = $file_type == '蝦皮' ? $this->sma->formatDecimal((int)$item['商品活動價格']*(int)$item['數量']) : $this->sma->formatDecimal((int)$item['單價']*(int)$item['數量']);
                     $sale_item['unit_quantity'] = $item['數量'];
                     // 放入訂單項目陣列
                     $sale_items_dataset[$item['訂單編號']][] = $sale_item;
@@ -2445,7 +2486,6 @@ class Sales extends MY_Controller
                     $this->data['warehouse']    = $this->session->userdata('warehouse_id') ? $this->site->getWarehouseByID($this->session->userdata('warehouse_id')) : null;
                 }
 
-                $this->data['GP'] = 'sufficient_stock-index';
                 $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => '#', 'page' => lang('sales_tmp')]];
                 $meta = ['page_title' => lang('sales_tmp'), 'bc' => $bc];
                 $this->page_construct('sales/salesTmp', $meta, $this->data);

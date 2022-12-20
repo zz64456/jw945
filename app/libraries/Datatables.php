@@ -24,6 +24,8 @@ class Datatables
 
     private $like = [];
 
+    private $or_like = [];
+
     private $or_where = [];
 
     private $select = [];
@@ -179,6 +181,21 @@ class Datatables
     {
         $this->like[] = [$key_condition, $val, $backtick_protect];
         $this->ci->db->like($key_condition, $val, $backtick_protect);
+        return $this;
+    }
+
+    /**
+     * Generates the OR %LIKE% portion of the query
+     *
+     * @param mixed $key_condition
+     * @param string $val
+     * @param bool $backtick_protect
+     * @return mixed
+     */
+    public function or_like($key_condition, $val = NULL, $side = 'both')
+    {
+        $this->or_like[] = array($key_condition, $val, $side);
+        $this->ci->db->or_like($key_condition, $val, $side);
         return $this;
     }
 

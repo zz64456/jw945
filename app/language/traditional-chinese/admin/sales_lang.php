@@ -43,6 +43,7 @@ $lang['payment_term_tip']                = '請只能輸入整數日';
 $lang['sale_note']                       = '銷售註記';
 $lang['staff_note']                      = '員工註記';
 $lang['serial_no']                       = '序號';
+$lang['product_code']                    = '產品代碼';
 $lang['product_option']                  = '產品選項';
 $lang['product_serial']                  = '產品序號';
 $lang['list_sale']                       = '銷售列表';
