@@ -2235,17 +2235,25 @@ class Sales extends MY_Controller
             $this->datatables->where('customer_id', $this->session->userdata('user_id'));
         }
         if ($status == 'sufficient_stock') {
-            $this->datatables->where("{$this->db->dbprefix('sales_tmp')}.situation", '0');
+            $this->datatables->where("{$this->db->dbprefix('sales_tmp')}.situation", '庫存正常');
         }
-        if ($status == 'insufficient_stock') {
-            $this->datatables->like("{$this->db->dbprefix('sales_tmp')}.situation", '1');
+        elseif ($status == 'insufficient_stock') {
+            $this->datatables->like("{$this->db->dbprefix('sales_tmp')}.situation", '庫存不足');
         }
-        if ($status == 'wait_to_check') {
-            $this->datatables->like("{$this->db->dbprefix('sales_tmp')}.situation", '2');
+        elseif ($status == 'wait_to_check') {
+            $this->datatables->like("{$this->db->dbprefix('sales_tmp')}.situation", '料號不齊');
+            $this->datatables->or_like("{$this->db->dbprefix('sales_tmp')}.situation", '訂單重複');
+//            $this->datatables->select('*');
+//            $this->datatables->join('vendor', 'vendor.vid = products.vendorid');
+//            $expl = explode(',', LOGINZIP);
+//            foreach ($expl as $exp) {
+//                $this->datatables->like('vendor.zip', $exp);
+//            }
+//            $this->datatables->from('products');
         }
-        if ($status == 'already_uploaded') {
-            $this->datatables->where("{$this->db->dbprefix('sales_tmp')}.situation", '4');
-        }
+//        if ($status == 'already_uploaded') {
+//            $this->datatables->where("{$this->db->dbprefix('sales_tmp')}.situation", '4');
+//        }
 
         echo $this->datatables->generate();
     }
@@ -2295,13 +2303,13 @@ class Sales extends MY_Controller
                 }
 
                 $file_type_check = '訂單成立日期';
-                $file_type = 1; // 預設為蝦皮
-                if (!in_array($file_type_check, $title)) { // 找不到$file_type_check則為露天
-                    $file_type = 2;
+                $file_type = '蝦皮'; // 預設為蝦皮
+                if (!in_array($file_type_check, $title)) {
+                    $file_type = '露天';
                 }
 
-                $sales_dataset = array();
-                $sale_items_dataset = array();
+                $sales_dataset = array(); // 訂單陣列，會進sales_tmp
+                $sale_items_dataset = array(); // 訂單項目陣列，會進sale_items_tmp
                 $failed_sale_items = array();
 
                 for($row = 2; $row <= $highest_row_index; $row++) { // 行
@@ -2320,7 +2328,7 @@ class Sales extends MY_Controller
                     if (!is_int($sales_dataset_index)) {
                         /** 訂單編號尚未存在 */
                         switch ($file_type) {
-                            case 1: // 蝦皮
+                            case '蝦皮':
                                 $sales['date'] = $item['訂單成立日期'];
                                 $sales['sale_items'] = $item['商品選項貨號'];
                                 $sales['note'] = $item['買家備註'];
@@ -2336,7 +2344,7 @@ class Sales extends MY_Controller
                                 $sales['customer'] = '蝦皮 ';
                                 break;
 
-                            case 2: // 露天
+                            case '露天':
                                 $sales['date'] = $item['結帳時間'];
                                 $sales['sale_items'] = $item['賣家自用料號'];
                                 $sales['note'] = $item['給賣家的話'];
@@ -2352,8 +2360,7 @@ class Sales extends MY_Controller
                                 break;
                         }
 
-                        /* situation : 0->庫存正常  1->庫存不足  2->待確認[訂單重複][料號不齊]  4->已上傳 */
-                        $sales['situation'] = '0';
+                        $sales['situation'] = '庫存正常';
                         $sales['reference_no'] = $item['訂單編號'];
                         $sales['biller_id'] = 3;
                         $sales['biller'] = '詠強有限公司';
@@ -2366,8 +2373,8 @@ class Sales extends MY_Controller
                             $customer = array(
                                 'group_id' => 3,
                                 'group_name' => 'customer',
-                                'customer_group_id' => $file_type == 1 ? 6 : 5,
-                                'customer_group_name' => $file_type == 1 ? '蝦皮客戶' : '露天客戶',
+                                'customer_group_id' => $file_type == '蝦皮' ? 6 : 5,
+                                'customer_group_name' => $file_type == '蝦皮' ? '蝦皮客戶' : '露天客戶',
                                 'name' => $sales['customer'],
                                 'company' => $sales['customer'],
                                 'logo' => 'logo.png',
@@ -2380,7 +2387,7 @@ class Sales extends MY_Controller
                         $sales['customer_id'] = $customer->id;
 
                         if ($this->sales_model->getSalesByRef($sales['reference_no']) || $this->sales_model->getSalesTmpByRef($sales['reference_no'])) {
-                            $sales['situation'] .= ',2'; // 待確認[訂單重複]
+                            $sales['situation'] .= ',訂單重複'; // 待確認[訂單重複]
                         }
                         // 放入訂單陣列
                         $sales_dataset[] = $sales;
@@ -2393,54 +2400,55 @@ class Sales extends MY_Controller
                      * 仍有少數例外
                      */
                     $sales_dataset[$sales_dataset_index]['total_items'] += (int)$item['數量'];
-                    if ($file_type == 1) {
+                    if ($file_type == '蝦皮') {
                         $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['商品選項貨號'];
                     } else {
                         $sales_dataset[$sales_dataset_index]['sale_items'] .= ",".$item['賣家自用料號'];
                     }
 
-                    $sale_item['status'] = 0; // 0->正常,1->庫存不足,3->料號不齊
-                    if ($product_details = $this->sales_model->getProductByCode($file_type == 1 ? $item['商品選項貨號'] : $item['賣家自用料號'])) {
+                    $sale_item['status'] = '庫存正常';
+                    
+                    if ($product_details = $this->sales_model->getProductByCode($file_type == '蝦皮' ? $item['商品選項貨號'] : $item['賣家自用料號'])) {
                         $unit     = $this->site->getUnitByID($product_details->unit);
                         $sale_item['product_id']        = $product_details->id;
                         $sale_item['product_code']      = $product_details->code;
                         $sale_item['product_name']      = $product_details->name;
-                        $sale_item['net_unit_price']    = $file_type == 1 ? $item['商品活動價格'] : $item['單價'];
+                        $sale_item['net_unit_price']    = $file_type == '蝦皮' ? $item['商品活動價格'] : $item['單價'];
                         $sale_item['product_type']      = $product_details->type;
                         $sale_item['unit_price']        = $sale_item['net_unit_price'];
                         $sale_item['real_unit_price']   = $sale_item['net_unit_price'];
                         $sale_item['product_unit_id']   = $unit->id;
                         $sale_item['product_unit_code'] = $unit->code;
                         if ($item['數量'] > $product_details->quantity) {
-                            if (strpos($sales_dataset[$sales_dataset_index]['situation'], '1') === false) {
-                                $sales_dataset[$sales_dataset_index]['situation'] .= ',1'; // 庫存不足
-                                $sale_item['status'] = 1;
+                            if (strpos($sales_dataset[$sales_dataset_index]['situation'], '庫存不足') === false) {
+                                $sales_dataset[$sales_dataset_index]['situation'] .= ',庫存不足'; // 庫存不足
+                                $sale_item['status'] = '庫存不足';
                             }
                         }
                         $sale_item['comment'] = intval(($sale_item['net_unit_price'] - $product_details->price)); // 平台價格與ERP價格 差
 
                     } else {
                         $sale_item['product_id']        = '';
-                        $sale_item['product_code']      = $file_type == 1 ? $item['商品選項貨號'] : $item['賣家自用料號'];
+                        $sale_item['product_code']      = $file_type == '蝦皮' ? $item['商品選項貨號'] : $item['賣家自用料號'];
                         $sale_item['product_name']      = $item['商品名稱'];
-                        $sale_item['net_unit_price']    = $file_type == 1 ? $item['商品活動價格'] : $item['單價'];
+                        $sale_item['net_unit_price']    = $file_type == '蝦皮' ? $item['商品活動價格'] : $item['單價'];
                         $sale_item['product_type']      = null;
                         $sale_item['unit_price']        = $sale_item['net_unit_price'];
                         $sale_item['real_unit_price']   = $sale_item['net_unit_price'];
                         $sale_item['product_unit_id']   = null;
                         $sale_item['product_unit_code'] = null;
                         $sale_item['comment'] = null;
-                        $sale_item['status'] = 3;
+                        $sale_item['status'] = '料號不齊';
 
-                        if (strpos($sales_dataset[$sales_dataset_index]['situation'], '2') === false) {
-                            $sales_dataset[$sales_dataset_index]['situation'] .= ',2'; // 待確認[料號不齊]
+                        if (strpos($sales_dataset[$sales_dataset_index]['situation'], '料號不齊') === false) {
+                            $sales_dataset[$sales_dataset_index]['situation'] .= ',料號不齊'; // 待確認[料號不齊]
                         }
                     }
 
                     $sale_item['reference_no'] = $item['訂單編號'];
                     $sale_item['warehouse_id'] = 1;
                     $sale_item['quantity'] = $item['數量'];
-                    $sale_item['subtotal'] = $file_type == 1 ? $this->sma->formatDecimal((int)$item['商品活動價格']*(int)$item['數量']) : $this->sma->formatDecimal((int)$item['單價']*(int)$item['數量']);
+                    $sale_item['subtotal'] = $file_type == '蝦皮' ? $this->sma->formatDecimal((int)$item['商品活動價格']*(int)$item['數量']) : $this->sma->formatDecimal((int)$item['單價']*(int)$item['數量']);
                     $sale_item['unit_quantity'] = $item['數量'];
                     // 放入訂單項目陣列
                     $sale_items_dataset[$item['訂單編號']][] = $sale_item;

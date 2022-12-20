@@ -1,13 +1,14 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 <script>
     $(document).ready(function () {
-        oTable = $('#SLData').dataTable({
+        // [庫存正常]
+        oTable_sufficient_stock = $('#SLData').dataTable({
             "aaSorting": [[1, "desc"], [2, "desc"]],
             "aLengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "<?=lang('all')?>"]],
             "iDisplayLength": <?=$Settings->rows_per_page?>,
             'bProcessing': true,
             'bServerSide': true,
-            'sAjaxSource': '<?=admin_url('sales/getSalesTmp/1'); ?>',
+            'sAjaxSource': '<?=admin_url('sales/getSalesTmp/1/sufficient_stock'); ?>',
             'fnServerData': function (sSource, aoData, fnCallback) {
                 aoData.push({
                     "name": "<?=$this->security->get_csrf_token_name()?>",
@@ -16,7 +17,7 @@
                 $.ajax({'dataType': 'json', 'type': 'POST', 'url': sSource, 'data': aoData, 'success': fnCallback});
             },
             'fnRowCallback': function (nRow, aData, iDisplayIndex) {
-                var oSettings = oTable.fnSettings();
+                var oSettings = oTable_sufficient_stock.fnSettings();
                 //$("td:first", nRow).html(oSettings._iDisplayStart+iDisplayIndex +1);
                 nRow.id = aData[0];
                 // nRow.setAttribute('data-return-id', aData[11]);
@@ -39,6 +40,8 @@
             {column_number: 3, filter_default_label: "[<?=lang('customer');?>]", filter_type: "text", data: []},
             {column_number: 5, filter_default_label: "[<?=lang('upload_status');?>]", filter_type: "text", data: []},
         ], "footer");
+
+        // [庫存不足]
         oTable_insufficient = $('#SLData1').dataTable({
             "aaSorting": [[1, "desc"], [2, "desc"]],
             "aLengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "<?=lang('all')?>"]],
@@ -54,7 +57,7 @@
                 $.ajax({'dataType': 'json', 'type': 'POST', 'url': sSource, 'data': aoData, 'success': fnCallback});
             },
             'fnRowCallback': function (nRow, aData, iDisplayIndex) {
-                var oSettings = oTable.fnSettings();
+                var oSettings = oTable_insufficient.fnSettings();
                 //$("td:first", nRow).html(oSettings._iDisplayStart+iDisplayIndex +1);
                 nRow.id = aData[0];
                 // nRow.setAttribute('data-return-id', aData[11]);
@@ -77,7 +80,9 @@
             {column_number: 3, filter_default_label: "[<?=lang('customer');?>]", filter_type: "text", data: []},
             {column_number: 5, filter_default_label: "[<?=lang('upload_status');?>]", filter_type: "text", data: []},
         ], "footer");
-        oTable_wait = $('#SLData2').dataTable({
+
+        // [待確認]
+        oTable_wait_to_check = $('#SLData2').dataTable({
             "aaSorting": [[1, "desc"], [2, "desc"]],
             "aLengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "<?=lang('all')?>"]],
             "iDisplayLength": <?=$Settings->rows_per_page?>,
@@ -92,7 +97,7 @@
                 $.ajax({'dataType': 'json', 'type': 'POST', 'url': sSource, 'data': aoData, 'success': fnCallback});
             },
             'fnRowCallback': function (nRow, aData, iDisplayIndex) {
-                var oSettings = oTable.fnSettings();
+                var oSettings = oTable_wait_to_check.fnSettings();
                 //$("td:first", nRow).html(oSettings._iDisplayStart+iDisplayIndex +1);
                 nRow.id = aData[0];
                 // nRow.setAttribute('data-return-id', aData[11]);
