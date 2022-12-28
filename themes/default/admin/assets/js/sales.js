@@ -1205,7 +1205,8 @@ function loadItems() {
             var item = this;
             var item_id = site.settings.item_addition == 1 ? item.item_id : item.id;
             item.order = item.order ? item.order : new Date().getTime();
-            var product_id = item.row.id,
+            var sale_id = item.row.sale_id,
+                product_id = item.row.id,
                 item_tmp_id = item.row.item_tmp_id,
                 item_type = item.row.type,
                 item_status = item.row.status,
@@ -1288,7 +1289,11 @@ function loadItems() {
             var newTr = $('<tr id="row_' + row_no + '" class="row_' + item_id + '" data-item-id="' + item_id + '"></tr>');
 
             tr_html =
-                '<td><input name="product_id[]" type="hidden" class="rid" value="' +
+                '<td><input name="sale_id" type="hidden" class="sale_id" value="' +
+                sale_id +
+                '"><input name="item_tmp_status[]" type="hidden" class="item_tmp_status" value="' +
+                item_status +
+                '"><input name="product_id[]" type="hidden" class="rid" value="' +
                 product_id +
                 '"><input name="product_type[]" type="hidden" class="rtype" value="' +
                 item_type +
@@ -1388,14 +1393,14 @@ function loadItems() {
                     row_no +
                     '" title="Remove" style="cursor:pointer;"></i></td>';
             } else if (method == 'edit_tmp') {
-                if (item_status == 1) {
+                if (item_status == '庫存不足') {
                     item_status = '庫存不足';
                     var color_code = '#f79605';
-                } else if (item_status == 3) {
+                } else if (item_status == '料號不齊') {
                     item_status = '料號不齊';
                     var color_code = ' #d9534f';
                 } else {
-                    item_status = '';
+                    item_status = '庫存正常';
                 }
                 tr_html +=
                     '<td class="text-right"><span class="text-right" id="sitem_status_' +

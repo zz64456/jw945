@@ -577,6 +577,11 @@ $(document).ready(function () {
         $.ajax({ url: site.base_url + 'welcome/hideNotification/' + $(this).attr('id') });
     });
     $('.tip').tooltip();
+    $(document).on('click', '#upload', function (e) {
+        e.preventDefault();
+        $('#form_action').val($(this).attr('data-action'));
+        $('#action-form').submit();
+    });
     $(document).on('click', '#delete', function (e) {
         e.preventDefault();
         $('#form_action').val($(this).attr('data-action'));
@@ -934,6 +939,43 @@ $(document).ready(function () {
     }
  });
 */
+$(document).on('ifChecked', '.checkft_1', function (event) {
+    $('.checkft_1').iCheck('check');
+    $('.multi-select-for-tmp-1').each(function () {
+        $(this).iCheck('check');
+    });
+});
+$(document).on('ifUnchecked', '.checkft_1', function (event) {
+    $('.checkft_1').iCheck('uncheck');
+    $('.multi-select-for-tmp-1').each(function () {
+        $(this).iCheck('uncheck');
+    });
+});
+$(document).on('ifChecked', '.checkft_2', function (event) {
+    $('.checkft_2').iCheck('check');
+    $('.multi-select-for-tmp-2').each(function () {
+        $(this).iCheck('check');
+    });
+});
+$(document).on('ifUnchecked', '.checkft_2', function (event) {
+    $('.checkft_2').iCheck('uncheck');
+    $('.multi-select-for-tmp-2').each(function () {
+        $(this).iCheck('uncheck');
+    });
+});
+$(document).on('ifChecked', '.checkft_3', function (event) {
+    $('.checkft_3').iCheck('check');
+    $('.multi-select-for-tmp-3').each(function () {
+        $(this).iCheck('check');
+    });
+});
+$(document).on('ifUnchecked', '.checkft_3', function (event) {
+    $('.checkft_3').iCheck('uncheck');
+    $('.multi-select-for-tmp-3').each(function () {
+        $(this).iCheck('uncheck');
+    });
+});
+
 $(document).on('ifChecked', '.checkth, .checkft', function (event) {
     $('.checkth, .checkft').iCheck('check');
     $('.multi-select').each(function () {
@@ -1111,6 +1153,15 @@ function pqFormat(x) {
 }
 function checkbox(x) {
     return '<div class="text-center"><input class="checkbox multi-select" type="checkbox" name="val[]" value="' + x + '" /></div>';
+}
+function checkbox_for_tmp_1(x) {
+    return '<div class="text-center"><input class="checkbox multi-select-for-tmp-1" type="checkbox" name="val[]" value="' + x + '" /></div>';
+}
+function checkbox_for_tmp_2(x) {
+    return '<div class="text-center"><input class="checkbox multi-select-for-tmp-2" type="checkbox" name="val[]" value="' + x + '" /></div>';
+}
+function checkbox_for_tmp_3(x) {
+    return '<div class="text-center"><input class="checkbox multi-select-for-tmp-3" type="checkbox" name="val[]" value="' + x + '" /></div>';
 }
 function decode_html(value) {
     return $('<div/>').html(value).text();

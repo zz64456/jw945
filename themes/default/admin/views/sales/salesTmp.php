@@ -25,7 +25,7 @@
                 //if(aData[7] > aData[9]){ nRow.className = "product_link warning"; } else { nRow.className = "product_link"; }
                 return nRow;
             },
-            "aoColumns": [{"bSortable": false,"mRender": checkbox}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": upload_status}],
+            "aoColumns": [{"bSortable": false,"mRender": checkbox_for_tmp_1}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": upload_status}],
             "fnFooterCallback": function (nRow, aaData, iStart, iEnd, aiDisplay) {
                 var gtotal = 0, paid = 0, balance = 0;
                 for (var i = 0; i < aaData.length; i++) {
@@ -65,7 +65,7 @@
                 //if(aData[7] > aData[9]){ nRow.className = "product_link warning"; } else { nRow.className = "product_link"; }
                 return nRow;
             },
-            "aoColumns": [{"bSortable": false,"mRender": checkbox}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": upload_status}],
+            "aoColumns": [{"bSortable": false,"mRender": checkbox_for_tmp_2}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": upload_status}],
             "fnFooterCallback": function (nRow, aaData, iStart, iEnd, aiDisplay) {
                 var gtotal = 0, paid = 0, balance = 0;
                 for (var i = 0; i < aaData.length; i++) {
@@ -105,7 +105,7 @@
                 //if(aData[7] > aData[9]){ nRow.className = "product_link warning"; } else { nRow.className = "product_link"; }
                 return nRow;
             },
-            "aoColumns": [{"bSortable": false,"mRender": checkbox}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": upload_status}],
+            "aoColumns": [{"bSortable": false,"mRender": checkbox_for_tmp_3}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": upload_status}],
             "fnFooterCallback": function (nRow, aaData, iStart, iEnd, aiDisplay) {
                 var gtotal = 0, paid = 0, balance = 0;
                 for (var i = 0; i < aaData.length; i++) {
@@ -125,11 +125,32 @@
 </script>
 
 
+
+<?php if ($Owner) {
+    echo admin_form_open('sales/sale_actions', 'id="action-form"');
+} ?>
 <div class="box">
     <div class="box-header">
         <h2 class="blue">
             <i class="fa-fw fa fa-heart"></i><?=lang('sales_tmp');?>
         </h2>
+
+        <div class="box-icon">
+            <ul class="btn-tasks">
+                <li class="dropdown">
+                    <a data-toggle="dropdown" class="dropdown-toggle" href="#"><i class="icon fa fa-tasks tip" data-placement="left" title="<?= lang('actions') ?>"></i></a>
+                    <ul class="dropdown-menu pull-right tasks-menus" role="menu" aria-labelledby="dLabel">
+<!--                        <li><a href="#" class="bpo" title="<b>--><?//= $this->lang->line('delete_users') ?><!--</b>" data-content="<p>--><?//= lang('r_u_sure') ?><!--</p><button type='button' class='btn btn-danger' id='delete' data-action='delete'>--><?//= lang('i_m_sure') ?><!--</a> <button class='btn bpo-close'>--><?//= lang('no') ?><!--</button>" data-html="true" data-placement="left"><i class="fa fa-trash-o"></i> --><?//= lang('delete_users') ?><!--</a></li>-->
+                        <li>
+                            <a href="#" class="bpo" title="<b><?= $this->lang->line('upload_file') ?></b>" data-content="<p><?= lang('r_u_sure') ?></p><button type='button' class='btn btn-danger' id='upload' data-action='upload'><?= lang('i_m_sure') ?></a> <button class='btn bpo-close'><?= lang('no') ?></button>" data-html="true" data-placement="left">
+                                <i class="fa fa-upload"></i>
+                                <?= $this->lang->line('upload_file') ?>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
     </div>
     <div class="box-content">
         <div class="row">
@@ -164,7 +185,7 @@
                                         <thead>
                                         <tr>
                                             <th style="min-width:30px; width: 3%; text-align: center;">
-                                                <input class="checkbox checkft" type="checkbox" name="check"/>
+                                                <input class="checkbox checkft_1" type="checkbox" name="check"/>
                                             </th>
                                             <th><?= lang('date'); ?></th>
                                             <th><?= lang('reference_no'); ?></th>
@@ -181,7 +202,7 @@
                                         <tfoot class="dtFilter">
                                         <tr class="active">
                                             <th style="min-width:30px; width: 3%; text-align: center;">
-                                                <input class="checkbox checkft" type="checkbox" name="check"/>
+                                                <input class="checkbox checkft_1" type="checkbox" name="check"/>
                                             </th>
                                             <th></th>
                                             <th></th>
@@ -208,7 +229,7 @@
                                             <thead>
                                             <tr>
                                                 <th style="min-width:30px; width: 3%; text-align: center;">
-                                                    <input class="checkbox checkft" type="checkbox" name="check"/>
+                                                    <input class="checkbox checkft_2" type="checkbox" name="check"/>
                                                 </th>
                                                 <th><?= lang('date'); ?></th>
                                                 <th><?= lang('reference_no'); ?></th>
@@ -225,7 +246,7 @@
                                             <tfoot class="dtFilter">
                                             <tr class="active">
                                                 <th style="min-width:30px; width: 3%; text-align: center;">
-                                                    <input class="checkbox checkft" type="checkbox" name="check"/>
+                                                    <input class="checkbox checkft_2" type="checkbox" name="check"/>
                                                 </th>
                                                 <th></th><th></th><th></th>
                                                 <th><?= lang('grand_total'); ?></th>
@@ -252,7 +273,7 @@
                                             <thead>
                                             <tr>
                                                 <th style="min-width:30px; width: 3%; text-align: center;">
-                                                    <input class="checkbox checkft" type="checkbox" name="check"/>
+                                                    <input class="checkbox checkft_3" type="checkbox" name="check"/>
                                                 </th>
                                                 <th><?= lang('date'); ?></th>
                                                 <th><?= lang('reference_no'); ?></th>
@@ -269,7 +290,7 @@
                                             <tfoot class="dtFilter">
                                             <tr class="active">
                                                 <th style="min-width:30px; width: 3%; text-align: center;">
-                                                    <input class="checkbox checkft" type="checkbox" name="check"/>
+                                                    <input class="checkbox checkft_3" type="checkbox" name="check"/>
                                                 </th>
                                                 <th></th><th></th><th></th>
                                                 <th><?= lang('grand_total'); ?></th>
@@ -289,6 +310,26 @@
         </div>
     </div>
 </div>
+
+<?php if ($Owner) {
+    ?>
+    <div style="display: none;">
+        <input type="hidden" name="form_action" value="" id="form_action"/>
+        <?= form_submit('performAction', 'performAction', 'id="action-form-submit"') ?>
+    </div>
+    <?= form_close() ?>
+
+    <script language="javascript">
+        $(document).ready(function () {
+            $('#set_admin').click(function () {
+                $('#usr-form-btn').trigger('click');
+            });
+
+        });
+    </script>
+
+    <?php
+} ?>
 
 <div class="box">
     <div class="box-header">
