@@ -786,15 +786,61 @@ class Sales extends MY_Controller
         $this->sma->checkPermissions();
 
         if ($this->input->method() === 'post') {
-            $item_id   = $this->input->post('item_tmp_id');
+            $sale_id      = $this->input->post('sale_id');
+            $item_status = $this->input->post('item_tmp_status');
+            $item_id      = $this->input->post('item_tmp_id');
             $product_id   = $this->input->post('product_id');
             $product_code = $this->input->post('product_code');
+            $id = $sale_id;
+            $item_update_result = false;
             foreach ($product_id as $index => $pid) {
                 if ($pid == 0) {
                     $pcode = $product_code[$index];
-                    $id = $this->sales_model->updateSaleTmp($item_id[$index], $pcode);
+                    $sale_items_tmp = $this->sales_model->getSaleItemsTmpByID($item_id[$index]);
+                    $product        = $this->sales_model->getProductByCode($pcode);
+                    if ($product) {
+                        $unit = $this->site->getUnitByID($product->unit);
+                        $data = array(
+                            'product_id'        => $product->id,
+                            'product_code'      => $product->code,
+                            'product_name'      => $product->name,
+                            'product_type'      => $product->type,
+                            'product_unit_id'   => $unit->id,
+                            'product_unit_code' => $unit->code
+                        );
+                        if ($sale_items_tmp->quantity > $product->quantity) {
+                            $data['status']      = '庫存不足';
+                            $item_status[$index] = '庫存不足';
+                        } else {
+                            $data['status']      = '庫存正常';
+                            $item_status[$index] = '庫存正常';
+                        }
+                        $item_update_result = $this->sales_model->updateSaleItemsTmpByID($item_id[$index], $data);
+                    }
                 } else {
                     // 暫不做事
+                }
+            }
+            if ($item_update_result) {
+                $sales_tmp = $this->sales_model->getSalesTmpByID($sale_id);
+                $situation = $sales_tmp->situation;
+                if (!strpos($sales_tmp->situation, '庫存不足') && in_array('庫存不足', $item_status)) { // 原本沒有庫存不足，料號全數更正後庫存不足
+                    $situation = $situation.',庫存不足';
+                    $this->sales_model->updateSalesTmpByID($sale_id, array(
+                        'situation' => $situation
+                    ));
+                }
+                if (strpos($sales_tmp->situation, '庫存不足') && !in_array('庫存不足', $item_status)) { // 原本庫存不足，料號全數更正後庫存正常
+                    $situation = str_replace(',庫存不足', '', $situation);
+                    $this->sales_model->updateSalesTmpByID($sale_id, array(
+                        'situation' => $situation
+                    ));
+                }
+                if (strpos($sales_tmp->situation, '料號不齊') && !in_array('料號不齊', $item_status)) { // 原本料號不齊，料號全數更正後庫存正常
+                    $situation = str_replace(',料號不齊', '', $situation);
+                    $this->sales_model->updateSalesTmpByID($sale_id, array(
+                        'situation' => $situation
+                    ));
                 }
             }
         } else {
@@ -827,6 +873,7 @@ class Sales extends MY_Controller
                 }
             }
             $row->item_tmp_id     = $item->id;
+            $row->sale_id         = $item->sale_id;
             $row->id              = $item->product_id;
             $row->code            = $item->product_code;
             $row->name            = $item->product_name;
@@ -880,7 +927,6 @@ class Sales extends MY_Controller
             $c++;
         }
         $this->data['inv_items'] = json_encode($pr);
-//        dump($this->data);
         $bc   = [['link' => base_url(), 'page' => lang('home')], ['link' => admin_url('sales'), 'page' => lang('sales')], ['link' => admin_url('sales/salesTmp'), 'page' => lang('sales_tmp')], ['link' => '#', 'page' => lang('edit_sale_tmp')]];
         $meta = ['page_title' => lang('edit_sale_tmp'), 'bc' => $bc];
         $this->page_construct('sales/edit_tmp', $meta, $this->data);
@@ -2194,6 +2240,45 @@ class Sales extends MY_Controller
                     $filename = 'sales_' . date('Y_m_d_H_i_s');
                     $this->load->helper('excel');
                     create_excel($this->excel, $filename);
+                } elseif ($this->input->post('form_action') == 'upload') {
+                    foreach ($_POST['val'] as $id) {
+                        # 上傳訂單 sales_tmp, sale_items_tmp 到 sales, sale_items
+                        $order = $this->sales_model->getSalesTmpByID($id);
+                        $data = array(
+                            'date' => $order->date,
+                            'reference_no' => $order->reference_no,
+                            'customer_id'  => $order->customer_id,
+                            'customer'     => $order->customer,
+                            'biller_id'    => $order->biller_id,
+                            'biller'       => $order->biller,
+                            'warehouse_id' => $order->warehouse_id,
+                            'note'         => $order->note,
+                            'staff_note'   => $order->staff_note,
+                            'total'        => $order->total,
+                            'product_discount' => $order->product_discount,
+                            'total_discount'   => $order->total_discount,
+                            'order_discount'   => $order->order_discount,
+                            'shipping'    => $order->shipping,
+                            'grand_total' => $order->grand_total,
+                            'sale_status' => 'completed',
+                            'payment_status' => 'paid',
+                            'paid'        => $order->grand_total,
+                            'created_by'  => $order->created_by,
+                            'updated_by'  => $order->updated_by,
+                            'updated_at'  => $order->updated_at,
+                            'total_items' => $order->total_items,
+                            'pos'         => $order->pos,
+                            'paid'        => $order->paid,
+                            'hash'        => hash('sha256', microtime() . mt_rand())
+                        );
+                        $sales_id = $this->sales_model->moveSalesTmpToSales($id, $data);
+                        if ($sales_id < 0) {
+                            $this->session->set_flashdata('message', lang('sale_added_failed'));
+                            redirect($_SERVER['HTTP_REFERER']);
+                        }
+                    }
+                    $this->session->set_flashdata('message', lang('sale_added'));
+                    redirect($_SERVER['HTTP_REFERER']);
                 }
             } else {
                 $this->session->set_flashdata('error', lang('no_sale_selected'));

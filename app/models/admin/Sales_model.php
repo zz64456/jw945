@@ -857,18 +857,30 @@ class Sales_model extends CI_Model
         return false;
     }
 
-    public function updateSaleTmp($id, $code)
+    public function editSaleItemsTmp($id, $code)
     {
         $product = $this->getProductByCode($code);
         if ($product) {
             $unit = $this->site->getUnitByID($product->unit);
-            dump($id);
+            $data = array(
+                'product_id' => $product->id,
+                'product_code' => $product->code,
+                'product_name' => $product->name,
+                'product_type' => $product->type,
+                'product_unit_id' => $unit->id,
+                'product_unit_code' => $unit->code
+            );
+            $item_tmp = $this->getSaleItemsTmpByID($id);
+            $sales_tmp = $this->getSalesTmpByID($item_tmp->sale_id);
+            if ($item_tmp->quantity > $product->quantity) {
+                $data['status'] = '庫存不足';
+            } else {
+                $data['status'] = '庫存正常';
+            }
             $this->db->where('id', $id);
-            $this->db->update('sale_items_tmp', ['product_id' => $product->id,'product_code' => $product->code,
-                'product_name' => $product->name,'product_type' => $product->type, 'status' => 0,
-                'product_unit_id' => $unit->id ,'product_unit_code' => $unit->code]);
+            $this->db->update('sale_items_tmp', $data);
         }
-        $saleItem = $this->getSaleItemsTmpBySaleID($id);
+        $saleItem = $this->getSaleItemsTmpByID($id);
         return $saleItem->sale_id;
     }
 
@@ -1024,16 +1036,7 @@ class Sales_model extends CI_Model
         return false;
     }
 
-    public function getSaleItemsTmpBySaleID($id)
-    {
-        $q = $this->db->get_where('sale_items_tmp', ['id' => $id], 1);
-        if ($q->num_rows() > 0) {
-            return $q->row();
-        }
-        return false;
-    }
-
-    public function addSalesTmps($data = [])
+    public function addSalesTmps($data = []) // 批量新增
     {
         $this->db->trans_start();
         $result = $this->db->insert_batch('sales_tmp', $data);
@@ -1044,12 +1047,20 @@ class Sales_model extends CI_Model
         return false;
     }
 
-    public function addSalesTmp($data = []){
+    public function addSalesTmp($data = []){ // 單筆新增
         if ($this->db->insert('sales_tmp', $data)) {
             return $this->db->insert_id();
         } else {
             return false;
         }
+    }
+
+    public function updateSalesTmpByID($id, $data){
+        $this->db->where('id', $id);
+        if ($this->db->update('sales_tmp', $data)) {
+            return true;
+        }
+        return false;
     }
 
     public function addSaleItemsTmps($data = []){
@@ -1063,10 +1074,39 @@ class Sales_model extends CI_Model
         }
     }
 
+    public function getSaleItemsTmpByID($id)
+    {
+        $q = $this->db->get_where('sale_items_tmp', ['id' => $id], 1);
+        if ($q->num_rows() > 0) {
+            return $q->row();
+        }
+        return false;
+    }
+
+    public function getSaleItemsTmpBySaleID($sale_id) {
+        $q = $this->db->get_where('sale_items_tmp', ['sale_id' => $sale_id]);
+        if ($q->num_rows() > 0) {
+            foreach (($q->result()) as $row) {
+                $data[] = $row;
+            }
+            return $data;
+        }
+        return false;
+    }
+
+    public function updateSaleItemsTmpByID($id, $data){
+        $this->db->where('id', $id);
+        if ($this->db->update('sale_items_tmp', $data)) {
+            return true;
+        }
+        return false;
+    }
+
     public function delTmps(){
         $result = $this->db->truncate('sales_tmp');
         $result2 = $this->db->truncate('sale_items_tmp');
         if ($result && $result2) {
+            $this->site->log('sales_tmp & sale_items_tmp', ['model' => '', 'items' => '']);
             return true;
         } else {
             return false;
@@ -1086,5 +1126,66 @@ class Sales_model extends CI_Model
             }
             return $data;
         }
+    }
+
+    public function moveSalesTmpToSales($sales_tmp_id, $data = [])
+    {
+        $si_return = null; // return才會用到
+        $this->db->trans_start();
+        if ($this->db->insert('sales', $data)) {
+            $sale_id = $this->db->insert_id();
+            $sale_items = $this->getSaleItemsTmpBySaleID($sales_tmp_id);
+            if (empty($si_return)) {
+                $array_sale_items = [];
+                foreach ($sale_items as $item) {
+                    $array_sale_items[] = (array)$item;
+                }
+                $cost = $this->site->costing($array_sale_items);
+            }
+            foreach ($sale_items as $item) {
+                $item->sale_id = $sale_id;
+                unset($item->id);
+                unset($item->reference_no);
+                unset($item->status);
+                $this->db->insert('sale_items', $item);
+                $sale_item_id = $this->db->insert_id();
+                if ($data['sale_status'] == 'completed' && empty($si_return)) {
+                    $item_costs = $this->site->item_costing((array)$item);
+                    foreach ($item_costs as $item_cost) {
+                        if (isset($item_cost['date']) || isset($item_cost['pi_overselling'])) {
+                            $item_cost['sale_item_id'] = $sale_item_id;
+                            $item_cost['sale_id'] = $sale_id;
+                            $item_cost['date'] = date('Y-m-d', strtotime($data['date']));
+                            if (!isset($item_cost['pi_overselling'])) {
+                                $this->db->insert('costing', $item_cost);
+                            }
+                        } else {
+                            foreach ($item_cost as $ic) {
+                                $ic['sale_item_id'] = $sale_item_id;
+                                $ic['sale_id'] = $sale_id;
+                                $ic['date'] = date('Y-m-d', strtotime($data['date']));
+                                if (!isset($ic['pi_overselling'])) {
+                                    $this->db->insert('costing', $ic);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if ($data['sale_status'] == 'completed') {
+                $this->site->syncPurchaseItems($cost);
+            }
+            $this->site->syncQuantity($sales_tmp_id, null, null, null, 'sales_tmp');
+            $this->updateSalesTmpByID($sales_tmp_id, array('upload_status' => 'uploaded'));
+        } else {
+            return -2;
+        }
+        $this->db->trans_complete();
+        if ($this->db->trans_status() === false) {
+            log_message('error', 'An errors has been occurred while adding the sale (Add:Sales_model.php)');
+        } else {
+            return $sale_id;
+        }
+        return -1;
     }
 }

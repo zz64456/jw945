@@ -25,6 +25,7 @@ $lang['edit_sale_tmp']                   = '編輯上傳之銷售';
 $lang['delete_sale']                     = '刪除銷售';
 $lang['delete_sales']                    = '刪除銷售';
 $lang['sale_added']                      = '銷售新增成功';
+$lang['sale_added_failed']               = '銷售新增成功';
 $lang['sale_uploaded']                   = '銷售上傳成功';
 $lang['sale_uploaded_failed']            = '銷售上傳失敗';
 $lang['sale_updated']                    = '銷售更新成功';

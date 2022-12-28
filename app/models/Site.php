@@ -418,6 +418,18 @@ class Site extends CI_Model
         return false;
     }
 
+    public function getAllSaleItemsTmp($sale_id)
+    {
+        $q = $this->db->get_where('sale_items_tmp', ['sale_id' => $sale_id]);
+        if ($q->num_rows() > 0) {
+            foreach (($q->result()) as $row) {
+                $data[] = $row;
+            }
+            return $data;
+        }
+        return [];
+    }
+
     public function getAllTaxRates()
     {
         $q = $this->db->get('tax_rates');
@@ -1156,10 +1168,14 @@ class Site extends CI_Model
         return false;
     }
 
-    public function syncQuantity($sale_id = null, $purchase_id = null, $oitems = null, $product_id = null)
+    public function syncQuantity($sale_id = null, $purchase_id = null, $oitems = null, $product_id = null, $table = null)
     {
         if ($sale_id) {
-            $sale_items = $this->getAllSaleItems($sale_id);
+            if ($table) {
+                $sale_items = $this->getAllSaleItemsTmp($sale_id);
+            } else {
+                $sale_items = $this->getAllSaleItems($sale_id);
+            }
             foreach ($sale_items as $item) {
                 if ($item->product_type == 'standard') {
                     $this->syncProductQty($item->product_id, $item->warehouse_id);
