@@ -2253,22 +2253,26 @@ class Sales extends MY_Controller
                             'biller'       => $order->biller,
                             'warehouse_id' => $order->warehouse_id,
                             'note'         => $order->note,
-                            'staff_note'   => $order->staff_note,
+                            'staff_note'   => $order->staff_note ? $order->staff_note : '',
                             'total'        => $order->total,
-                            'product_discount' => $order->product_discount,
-                            'total_discount'   => $order->total_discount,
-                            'order_discount'   => $order->order_discount,
+                            'product_discount'  => $order->product_discount,
+                            'order_discount_id' => $order->order_discount_id,
+                            'total_discount'    => $order->total_discount,
+                            'order_discount'    => $order->order_discount,
                             'shipping'    => $order->shipping,
                             'grand_total' => $order->grand_total,
                             'sale_status' => 'completed',
                             'payment_status' => 'paid',
+                            'payment_term'   => '0',
                             'paid'        => $order->grand_total,
                             'created_by'  => $order->created_by,
-                            'updated_by'  => $order->updated_by,
+                            'updated_by'  => $this->session->userdata('user_id'),
                             'updated_at'  => $order->updated_at,
                             'total_items' => $order->total_items,
                             'pos'         => $order->pos,
                             'paid'        => $order->paid,
+                            'attachment'  => '0',
+                            'sale_remark' => '',
                             'hash'        => hash('sha256', microtime() . mt_rand())
                         );
                         $sales_id = $this->sales_model->moveSalesTmpToSales($id, $data);
@@ -2306,12 +2310,12 @@ class Sales extends MY_Controller
         $this->load->library('datatables');
         if ($warehouse_id) {
             $this->datatables
-                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, upload_status")
+                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, situation, upload_status")
                 ->from('sales_tmp')
                 ->where('warehouse_id', $warehouse_id);
         } else {
             $this->datatables
-                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, upload_status")
+                ->select("{$this->db->dbprefix('sales_tmp')}.id as id, DATE_FORMAT({$this->db->dbprefix('sales_tmp')}.date, '%Y-%m-%d %T') as date, reference_no, {$this->db->dbprefix('sales_tmp')}.customer, grand_total, situation, upload_status")
                 ->from('sales_tmp');
         }
         if (!$this->Customer && !$this->Supplier && !$this->Owner && !$this->Admin && !$this->session->userdata('view_right')) {
@@ -2420,7 +2424,7 @@ class Sales extends MY_Controller
                                 $sales['staff_note'] = $item['備註'];
                                 $sales['total'] = $item['商品總價'];
                                 $sales['product_discount'] = $item['商品原價'] - $item['商品活動價格']; // 放在sales裡怪怪的，應放在sale_items
-                                $sales['order_discount_id'] = 0;
+                                $sales['order_discount_id'] = '';
                                 $sales['order_discount'] = $item['成交手續費'] + $item['活動服務費'] + $item['金流服務費'];
                                 $sales['total_discount'] = $sales['product_discount'] + $sales['order_discount'];
                                 $sales['grand_total'] = $item['商品總價'] - $sales['order_discount'];
@@ -2435,7 +2439,7 @@ class Sales extends MY_Controller
                                 $sales['note'] = $item['給賣家的話'];
                                 $sales['total'] = $this->sma->formatDecimal((int)$item['數量']*(int)$item['單價']); // 該筆訂單商品總金額，未扣除任何折扣
                                 $sales['product_discount'] = 0;
-                                $sales['order_discount_id'] = 0;
+                                $sales['order_discount_id'] = '';
                                 $sales['order_discount'] = $item['露天折扣碼金額'] + $item['賣家折扣碼金額'] + $item['露幣折抵金額'];
                                 $sales['total_discount'] = $sales['product_discount'] + $sales['order_discount'];
                                 $sales['grand_total'] = $item['結帳總金額']; // 結帳總金額，已扣除所有折扣
