@@ -1229,6 +1229,24 @@ function upload_status(x) {
         return '<div class="text-center"><span class="upload_status label label-warning">' + lang[x] + '</span></div>';
     }
 }
+function situation(x) {
+    html = '<div class="text-center">'
+    if (x == '庫存正常') {
+        html += '<span class="situation label" style="color: #5cb85c">庫存正常</span>'
+    } else {
+        if (x.includes('庫存不足')) {
+            html += '<span class="situation label" style="color: #f79605">' + '庫存不足' + '</span>'
+        }
+        if (x.includes('料號不齊')) {
+            html += '<span class="situation label" style="color: #d9534f">' + '料號不齊' + '</span>'
+        }
+        if (x.includes('訂單重複')) {
+            html += '<span class="situation label" style="color: violet">' + '訂單重複' + '</span>'
+        }
+    }
+    html += '</div>';
+    return html
+}
 function row_status(x) {
     if (x == null) {
         return '';

@@ -25,7 +25,7 @@
                 //if(aData[7] > aData[9]){ nRow.className = "product_link warning"; } else { nRow.className = "product_link"; }
                 return nRow;
             },
-            "aoColumns": [{"bSortable": false,"mRender": checkbox_for_tmp_1}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": upload_status}],
+            "aoColumns": [{"bSortable": false,"mRender": checkbox_for_tmp_1}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": situation}, {"mRender": upload_status}],
             "fnFooterCallback": function (nRow, aaData, iStart, iEnd, aiDisplay) {
                 var gtotal = 0, paid = 0, balance = 0;
                 for (var i = 0; i < aaData.length; i++) {
@@ -38,7 +38,8 @@
             {column_number: 1, filter_default_label: "[<?=lang('date');?> (yyyy-mm-dd)]", filter_type: "text", data: []},
             {column_number: 2, filter_default_label: "[<?=lang('reference_no');?>]", filter_type: "text", data: []},
             {column_number: 3, filter_default_label: "[<?=lang('customer');?>]", filter_type: "text", data: []},
-            {column_number: 5, filter_default_label: "[<?=lang('upload_status');?>]", filter_type: "text", data: []},
+            {column_number: 5, filter_default_label: "[<?=lang('sale_status');?>]", filter_type: "text", data: []},
+            {column_number: 6, filter_default_label: "[<?=lang('upload_status');?>]", filter_type: "text", data: []},
         ], "footer");
 
         // [庫存不足]
@@ -65,7 +66,7 @@
                 //if(aData[7] > aData[9]){ nRow.className = "product_link warning"; } else { nRow.className = "product_link"; }
                 return nRow;
             },
-            "aoColumns": [{"bSortable": false,"mRender": checkbox_for_tmp_2}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": upload_status}],
+            "aoColumns": [{"bSortable": false,"mRender": checkbox_for_tmp_2}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": situation}, {"mRender": upload_status}],
             "fnFooterCallback": function (nRow, aaData, iStart, iEnd, aiDisplay) {
                 var gtotal = 0, paid = 0, balance = 0;
                 for (var i = 0; i < aaData.length; i++) {
@@ -78,7 +79,8 @@
             {column_number: 1, filter_default_label: "[<?=lang('date');?> (yyyy-mm-dd)]", filter_type: "text", data: []},
             {column_number: 2, filter_default_label: "[<?=lang('reference_no');?>]", filter_type: "text", data: []},
             {column_number: 3, filter_default_label: "[<?=lang('customer');?>]", filter_type: "text", data: []},
-            {column_number: 5, filter_default_label: "[<?=lang('upload_status');?>]", filter_type: "text", data: []},
+            {column_number: 5, filter_default_label: "[<?=lang('sale_status');?>]", filter_type: "text", data: []},
+            {column_number: 6, filter_default_label: "[<?=lang('upload_status');?>]", filter_type: "text", data: []},
         ], "footer");
 
         // [待確認]
@@ -105,7 +107,7 @@
                 //if(aData[7] > aData[9]){ nRow.className = "product_link warning"; } else { nRow.className = "product_link"; }
                 return nRow;
             },
-            "aoColumns": [{"bSortable": false,"mRender": checkbox_for_tmp_3}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": upload_status}],
+            "aoColumns": [{"bSortable": false,"mRender": checkbox_for_tmp_3}, {"mRender": fld}, null, null, {"mRender": currencyFormat}, {"mRender": situation}, {"mRender": upload_status}],
             "fnFooterCallback": function (nRow, aaData, iStart, iEnd, aiDisplay) {
                 var gtotal = 0, paid = 0, balance = 0;
                 for (var i = 0; i < aaData.length; i++) {
@@ -118,7 +120,8 @@
             {column_number: 1, filter_default_label: "[<?=lang('date');?> (yyyy-mm-dd)]", filter_type: "text", data: []},
             {column_number: 2, filter_default_label: "[<?=lang('reference_no');?>]", filter_type: "text", data: []},
             {column_number: 3, filter_default_label: "[<?=lang('customer');?>]", filter_type: "text", data: []},
-            {column_number: 5, filter_default_label: "[<?=lang('upload_status');?>]", filter_type: "text", data: []},
+            {column_number: 5, filter_default_label: "[<?=lang('sale_status');?>]", filter_type: "text", data: []},
+            {column_number: 6, filter_default_label: "[<?=lang('upload_status');?>]", filter_type: "text", data: []},
         ], "footer");
     });
 
@@ -191,6 +194,7 @@
                                             <th><?= lang('reference_no'); ?></th>
                                             <th><?= lang('customer'); ?></th>
                                             <th><?= lang('grand_total'); ?></th>
+                                            <th><?= lang('sale_status'); ?></th>
                                             <th><?= lang('upload_status'); ?></th>
                                         </tr>
                                         </thead>
@@ -204,6 +208,7 @@
                                             <th style="min-width:30px; width: 3%; text-align: center;">
                                                 <input class="checkbox checkft_1" type="checkbox" name="check"/>
                                             </th>
+                                            <th></th>
                                             <th></th>
                                             <th></th>
                                             <th></th>
@@ -236,6 +241,7 @@
                                                 <th><?= lang('customer'); ?></th>
                                                 <th><?= lang('grand_total'); ?></th>
                                                 <th><?= lang('sale_status'); ?></th>
+                                                <th><?= lang('upload_status'); ?></th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -250,6 +256,7 @@
                                                 </th>
                                                 <th></th><th></th><th></th>
                                                 <th><?= lang('grand_total'); ?></th>
+                                                <th></th>
                                                 <th></th>
                                             </tr>
                                             </tfoot>
@@ -280,6 +287,7 @@
                                                 <th><?= lang('customer'); ?></th>
                                                 <th><?= lang('grand_total'); ?></th>
                                                 <th><?= lang('sale_status'); ?></th>
+                                                <th><?= lang('upload_status'); ?></th>
                                             </tr>
                                             </thead>
                                             <tbody>
@@ -294,6 +302,7 @@
                                                 </th>
                                                 <th></th><th></th><th></th>
                                                 <th><?= lang('grand_total'); ?></th>
+                                                <th></th>
                                                 <th></th>
                                             </tr>
                                             </tfoot>
