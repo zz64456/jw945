@@ -1009,9 +1009,28 @@ class Sales_model extends CI_Model
         return false;
     }
 
+    public function getSalesRecent()
+    {
+        $date = new DateTime('now');
+        $date->modify('-3 month');
+        $this->db->where('updated_at >', $date->format('Y-m-d H:i:s'));
+        $q = $this->db->get('sales');
+        if ($q->num_rows() > 0) {
+            foreach (($q->result()) as $row) {
+                $data[] = $row;
+            }
+            return $data;
+        }
+        return false;
+    }
+
     public function getSalesByRef($reference_no)
     {
-        $q = $this->db->get_where('sales', ['reference_no' => $reference_no], 1);
+        $date = new DateTime('now');
+        $date->modify('-3 month');
+        $this->db->where('updated_at >', $date->format('Y-m-d H:i:s'));
+        $this->db->where('reference_no', $reference_no);
+        $q = $this->db->get('sales', 1);
         if ($q->num_rows() > 0) {
             return $q->row();
         }
