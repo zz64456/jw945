@@ -1314,12 +1314,15 @@ function loadItems() {
                 item_code +
                 ' - ' +
                 item_name +
-                (sel_opt != '' ? ' (' + sel_opt + ')' : '') +
-                '</span> <i class="pull-right fa fa-edit tip pointer edit" id="' +
-                row_no +
-                '" data-item="' +
-                item_id +
-                '" title="Edit" style="cursor:pointer;"></i></td>';
+                (sel_opt != '' ? ' (' + sel_opt + ')' : '') + '</span>';
+            if (product_id == 0) {
+                tr_html += '<i class="pull-right fa fa-edit tip pointer edit" id="' +
+                    row_no +
+                    '" data-item="' +
+                    item_id +
+                    '" title="Edit" style="cursor:pointer;"></i>'
+            }
+            tr_html += '</td>';
             if (site.settings.product_serial == 1 && method != 'edit_tmp') {
                 tr_html +=
                     '<td class="text-right"><input class="form-control input-sm rserial" name="serial[]" type="text" id="serial_' +
