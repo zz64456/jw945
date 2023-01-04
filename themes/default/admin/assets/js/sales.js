@@ -1288,12 +1288,15 @@ function loadItems() {
             var row_no = item.id;
             var newTr = $('<tr id="row_' + row_no + '" class="row_' + item_id + '" data-item-id="' + item_id + '"></tr>');
 
-            tr_html =
-                '<td><input name="sale_id" type="hidden" class="sale_id" value="' +
-                sale_id +
-                '"><input name="item_tmp_status[]" type="hidden" class="item_tmp_status" value="' +
-                item_status +
-                '"><input name="product_id[]" type="hidden" class="rid" value="' +
+            tr_html = '<td>'
+            if (method == 'edit_tmp') {
+                tr_html += '<input name="sale_id" type="hidden" class="sale_id" value="' +
+                    sale_id +
+                    '"><input name="item_tmp_status[]" type="hidden" class="item_tmp_status" value="' +
+                    item_status + '">';
+            }
+            tr_html +=
+                '<input name="product_id[]" type="hidden" class="rid" value="' +
                 product_id +
                 '"><input name="product_type[]" type="hidden" class="rtype" value="' +
                 item_type +
@@ -1317,7 +1320,7 @@ function loadItems() {
                 '" data-item="' +
                 item_id +
                 '" title="Edit" style="cursor:pointer;"></i></td>';
-            if (site.settings.product_serial == 1 && method == 'edit') {
+            if (site.settings.product_serial == 1 && method != 'edit_tmp') {
                 tr_html +=
                     '<td class="text-right"><input class="form-control input-sm rserial" name="serial[]" type="text" id="serial_' +
                     row_no +
@@ -1355,7 +1358,7 @@ function loadItems() {
                 '"><input name="product_base_quantity[]" type="hidden" class="rbase_quantity" value="' +
                 base_quantity +
                 '"></td>';
-            if (method == 'edit') {
+            if (method != 'edit_tmp') {
                 if ((site.settings.product_discount == 1 && allow_discount == 1) || item_discount) {
                     tr_html +=
                         '<td class="text-right"><input class="form-control input-sm rdiscount" name="product_discount[]" type="hidden" id="discount_' +
@@ -1450,7 +1453,7 @@ function loadItems() {
             }
         });
 
-        var col = method == 'edit' ? 2 : 1;
+        var col = method != 'edit_tmp' ? 2 : 1;
         if (site.settings.product_serial == 1) {
             col++;
         }
@@ -1458,7 +1461,7 @@ function loadItems() {
             '<tr id="tfoot" class="tfoot active"><th colspan="' +
             col +
             '">Total</th>';
-        if (method == 'edit') {
+        if (method != 'edit_tmp') {
             tfoot += '<th class="text-center">' +
                 formatQty(parseFloat(count) - 1) +
                 '</th>';
