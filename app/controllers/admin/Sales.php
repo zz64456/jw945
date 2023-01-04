@@ -2272,7 +2272,6 @@ class Sales extends MY_Controller
                             'pos'         => $order->pos,
                             'paid'        => $order->paid,
                             'attachment'  => '0',
-                            'sale_remark' => '',
                             'hash'        => hash('sha256', microtime() . mt_rand())
                         );
                         $sales_id = $this->sales_model->moveSalesTmpToSales($id, $data);
