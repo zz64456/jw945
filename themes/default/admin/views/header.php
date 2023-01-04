@@ -1055,6 +1055,11 @@
                                             <i class="fa fa-plus-circle"></i><span class="text"> <?= lang('add_sale'); ?></span>
                                         </a>
                                     </li>
+                                    <li id="sales_salestmp">
+                                        <a class="submenu" href="<?= admin_url('sales/salesTmp'); ?>">
+                                            <i class="fa fa-plus-circle"></i><span class="text"> <?= lang('sales_tmp'); ?></span>
+                                        </a>
+                                    </li>
                                     <?php
                                 }
                                 if ($GP['sales-deliveries']) {

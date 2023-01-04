@@ -783,7 +783,7 @@ class Sales extends MY_Controller
     /* ------------------------------------------------------------------------ */
 
     public function edit_tmp($id = null) {
-        $this->sma->checkPermissions();
+        $this->sma->checkPermissions('edit');
 
         if ($this->input->method() === 'post') {
             $sale_id      = $this->input->post('sale_id');
@@ -2338,14 +2338,17 @@ class Sales extends MY_Controller
 
     public function deleteTmps()
     {
+        $this->sma->checkPermissions('delete');
         $this->sales_model->delTmps();
         $this->session->set_flashdata('message', lang('delete_successfully'));
-        $this->salesTmp();
+        redirect($_SERVER['HTTP_REFERER']);
     }
 
     public function salesTmp($warehouse_id = null)
     {
         ini_set('memory_limit', '1024M');
+
+        $this->sma->checkPermissions('add'); // 權限歸屬在sales-add
 
         if ($this->form_validation->run() == false) {
             if (isset($_FILES['userfile'])) {
@@ -2564,7 +2567,6 @@ class Sales extends MY_Controller
                 admin_redirect('sales/salesTmp');
 
             } else {
-                $this->sma->checkPermissions();
 
                 $this->data['error'] = (validation_errors()) ? validation_errors() : $this->session->flashdata('error');
                 if ($this->Owner || $this->Admin || !$this->session->userdata('warehouse_id')) {

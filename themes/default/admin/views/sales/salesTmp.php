@@ -129,10 +129,11 @@
 
 
 
-<?php if ($Owner) {
+<?php if ($Owner || $Admin || $GP['bulk_actions']) {
     echo admin_form_open('sales/sale_actions', 'id="action-form"');
 } ?>
 <div class="box">
+    <?php if ($Owner || $Admin || $GP['bulk_actions']) { ?>
     <div class="box-header">
         <h2 class="blue">
             <i class="fa-fw fa fa-heart"></i><?=lang('sales_tmp');?>
@@ -143,7 +144,6 @@
                 <li class="dropdown">
                     <a data-toggle="dropdown" class="dropdown-toggle" href="#"><i class="icon fa fa-tasks tip" data-placement="left" title="<?= lang('actions') ?>"></i></a>
                     <ul class="dropdown-menu pull-right tasks-menus" role="menu" aria-labelledby="dLabel">
-<!--                        <li><a href="#" class="bpo" title="<b>--><?//= $this->lang->line('delete_users') ?><!--</b>" data-content="<p>--><?//= lang('r_u_sure') ?><!--</p><button type='button' class='btn btn-danger' id='delete' data-action='delete'>--><?//= lang('i_m_sure') ?><!--</a> <button class='btn bpo-close'>--><?//= lang('no') ?><!--</button>" data-html="true" data-placement="left"><i class="fa fa-trash-o"></i> --><?//= lang('delete_users') ?><!--</a></li>-->
                         <li>
                             <a href="#" class="bpo" title="<b><?= $this->lang->line('upload_file') ?></b>" data-content="<p><?= lang('r_u_sure') ?></p><button type='button' class='btn btn-danger' id='upload' data-action='upload'><?= lang('i_m_sure') ?></a> <button class='btn bpo-close'><?= lang('no') ?></button>" data-html="true" data-placement="left">
                                 <i class="fa fa-upload"></i>
@@ -155,30 +155,27 @@
             </ul>
         </div>
     </div>
+    <?php } ?>
     <div class="box-content">
         <div class="row">
             <div class="col-lg-12">
 
                 <ul id="dbTab" class="nav nav-tabs">
-                    <?php if ($Owner || $Admin || $GP['sufficient-index']) {
+                    <?php if ($Owner || $Admin || $GP['sales-add']) {
                         ?>
                         <li class=""><a href="#sufficient"><?= lang('sufficient_stock') ?></a></li>
-                        <?php
-                    } if ($Owner || $Admin || $GP['insufficient-index']) {
-                        ?>
                         <li class=""><a href="#insufficient"><?= lang('insufficient_stock') ?></a></li>
-                        <?php
-                    } if ($Owner || $Admin || $GP['wait-index']) {
-                        ?>
                         <li class=""><a href="#wait"><?= lang('wait_to_check') ?></a></li>
                         <?php
-                    } ?>
+                    }
+                        ?>
                 </ul>
+
 
                 <div class="tab-content">
 
 
-                    <?php if ($Owner || $Admin || $GP['sufficient-index']) {
+                    <?php if ($Owner || $Admin || $GP['sales-add']) {
                     ?>
                     <div id="sufficient" class="tab-pane fade in">
                         <div class="row">
@@ -224,7 +221,7 @@
                     <?php }
                     ?>
 
-                    <?php if ($Owner || $Admin || $GP['insufficient-index']) {
+                    <?php if ($Owner || $Admin || $GP['sales-add']) {
                         ?>
                         <div id="insufficient" class="tab-pane fade in">
                             <div class="row">
@@ -270,7 +267,7 @@
 
 
 
-                    <?php if ($Owner || $Admin || $GP['wait-index']) {
+                    <?php if ($Owner || $Admin || $GP['sales-add']) {
                         ?>
                         <div id="wait" class="tab-pane fade in">
                             <div class="row">
@@ -320,7 +317,7 @@
     </div>
 </div>
 
-<?php if ($Owner) {
+<?php if ($Owner || $Admin || $GP['bulk_actions']) {
     ?>
     <div style="display: none;">
         <input type="hidden" name="form_action" value="" id="form_action"/>
@@ -362,9 +359,11 @@
                                        data-show-upload="false" data-show-preview="false" class="form-control file">
                             </div>
                         </div>
+                        <?php if ($Owner || $Admin || $GP['sales-delete']) { ?>
                         <a href="<?php echo admin_url('sales/deleteTmps/'); ?>" class="btn btn-danger pull-right" >
                             <i class="icon-download icon-white"></i><?= lang('delete_all'); ?>
                         </a>
+                        <?php } ?>
                         <div class="col-md-12">
                             <div class="fprom-group">
                                 <?php echo form_submit('add_sale', $this->lang->line('submit'), 'id="add_sale" class="btn btn-primary" style="padding: 6px 15px; margin:15px 0;"'); ?>

@@ -404,20 +404,14 @@
                     <div class="btn-group btn-group-justified">
                         <?php if (!$inv->sale_id) {
                             ?>
+                        <?php if ($Owner || $Admin || $GP['sales-edit']) { ?>
                         <div class="btn-group">
                             <a href="<?= admin_url('sales/edit_tmp/' . $inv->id) ?>" class="tip btn btn-warning sledit" title="<?= lang('edit') ?>">
                                 <i class="fa fa-edit"></i>
                                 <span class="hidden-sm hidden-xs"><?= lang('edit') ?></span>
                             </a>
                         </div>
-                        <div class="btn-group">
-                            <a href="#" class="tip btn btn-danger bpo" title="<b><?= $this->lang->line('delete_sale') ?></b>"
-                                data-content="<div style='width:150px;'><p><?= lang('r_u_sure') ?></p><a class='btn btn-danger' href='<?= admin_url('sales/delete/' . $inv->id) ?>'><?= lang('i_m_sure') ?></a> <button class='btn bpo-close'><?= lang('no') ?></button></div>"
-                                data-html="true" data-placement="top">
-                                <i class="fa fa-trash-o"></i>
-                                <span class="hidden-sm hidden-xs"><?= lang('delete') ?></span>
-                            </a>
-                        </div>
+                        <?php } ?>
                             <?php
                         } ?>
                     </div>
