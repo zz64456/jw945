@@ -2272,7 +2272,6 @@ class Sales extends MY_Controller
                             'pos'         => $order->pos,
                             'paid'        => $order->paid,
                             'attachment'  => '0',
-                            'sale_remark' => '',
                             'hash'        => hash('sha256', microtime() . mt_rand())
                         );
                         $sales_id = $this->sales_model->moveSalesTmpToSales($id, $data);
@@ -2332,17 +2331,7 @@ class Sales extends MY_Controller
         elseif ($status == 'wait_to_check') {
             $this->datatables->like("{$this->db->dbprefix('sales_tmp')}.situation", '料號不齊');
             $this->datatables->or_like("{$this->db->dbprefix('sales_tmp')}.situation", '訂單重複');
-//            $this->datatables->select('*');
-//            $this->datatables->join('vendor', 'vendor.vid = products.vendorid');
-//            $expl = explode(',', LOGINZIP);
-//            foreach ($expl as $exp) {
-//                $this->datatables->like('vendor.zip', $exp);
-//            }
-//            $this->datatables->from('products');
         }
-//        if ($status == 'already_uploaded') {
-//            $this->datatables->where("{$this->db->dbprefix('sales_tmp')}.situation", '4');
-//        }
 
         echo $this->datatables->generate();
     }
@@ -2399,7 +2388,6 @@ class Sales extends MY_Controller
 
                 $sales_dataset = array(); // 訂單陣列，會進sales_tmp
                 $sale_items_dataset = array(); // 訂單項目陣列，會進sale_items_tmp
-                $failed_sale_items = array();
 
                 for($row = 2; $row <= $highest_row_index; $row++) { // 行
                     $item = [];
@@ -2418,12 +2406,15 @@ class Sales extends MY_Controller
                         /** 訂單編號尚未存在 */
                         switch ($file_type) {
                             case '蝦皮':
+                                if (strlen($item['商品選項貨號']) < 1) {
+                                    $item['商品選項貨號'] = $item['主商品貨號'];
+                                }
                                 $sales['date'] = $item['訂單成立日期'];
                                 $sales['sale_items'] = $item['商品選項貨號'];
                                 $sales['note'] = $item['買家備註'];
                                 $sales['staff_note'] = $item['備註'];
                                 $sales['total'] = $item['商品總價'];
-                                $sales['product_discount'] = $item['商品原價'] - $item['商品活動價格']; // 放在sales裡怪怪的，應放在sale_items
+                                $sales['product_discount'] = $item['商品原價'] - $item['商品活動價格'];
                                 $sales['order_discount_id'] = '';
                                 $sales['order_discount'] = $item['成交手續費'] + $item['活動服務費'] + $item['金流服務費'];
                                 $sales['total_discount'] = $sales['product_discount'] + $sales['order_discount'];
@@ -2475,9 +2466,6 @@ class Sales extends MY_Controller
                         }
                         $sales['customer_id'] = $customer->id;
 
-                        if ($this->sales_model->getSalesByRef($sales['reference_no']) || $this->sales_model->getSalesTmpByRef($sales['reference_no'])) {
-                            $sales['situation'] .= ',訂單重複'; // 待確認[訂單重複]
-                        }
                         // 放入訂單陣列
                         $sales_dataset[] = $sales;
                         // 標記新訂單索引
@@ -2543,11 +2531,25 @@ class Sales extends MY_Controller
                     $sale_items_dataset[$item['訂單編號']][] = $sale_item;
                 }
 
-                // 寫入sales_tmp & sale_items_tmp
+                $exist_reference = [];
+                $recent_sales = $this->sales_model->getSalesRecent();
+                if ($recent_sales){
+                    foreach ($recent_sales as $data) {
+                        $exist_reference[] = explode(' ', $data->reference_no)[0];
+                    }
+                    foreach ($sales_dataset as $index => $data) {
+                        if (in_array($data['reference_no'], $exist_reference)) {
+                            $sales_dataset[$index]['situation'] .= ',訂單重複';
+                        }
+                    }
+                }
+
+                // 寫入sales_tmp
                 if (!$this->sales_model->addSalesTmps($sales_dataset)) {
                     $this->session->set_flashdata('error', $this->lang->line('sale_uploaded_failed')."-1");
                     admin_redirect('sales/salesTmp');
                 }
+                // 寫入sale_items_tmp
                 foreach ($sale_items_dataset as $order_index => $sale_orders){
                     foreach ($sale_orders as $item_index => $sale_item) {
                         $sales = $this->sales_model->getSalesTmpByRef($sale_item['reference_no']);
