@@ -1315,7 +1315,9 @@ function loadItems() {
                 ' - ' +
                 item_name +
                 (sel_opt != '' ? ' (' + sel_opt + ')' : '') + '</span>';
-            if (product_id == 0) {
+            if (method == 'edit_tmp' && product_id != 0){
+
+            } else {
                 tr_html += '<i class="pull-right fa fa-edit tip pointer edit" id="' +
                     row_no +
                     '" data-item="' +
