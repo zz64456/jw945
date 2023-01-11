@@ -2527,6 +2527,7 @@ class Sales extends MY_Controller
 
                     $sale_item['reference_no'] = $item['訂單編號'];
                     $sale_item['warehouse_id'] = 1;
+                    $sale_item['serial_no']    = '';
                     $sale_item['quantity'] = $item['數量'];
                     $sale_item['subtotal'] = $file_type == '蝦皮' ? $this->sma->formatDecimal((int)$item['商品活動價格']*(int)$item['數量']) : $this->sma->formatDecimal((int)$item['單價']*(int)$item['數量']);
                     $sale_item['unit_quantity'] = $item['數量'];
